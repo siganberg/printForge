@@ -1,9 +1,10 @@
 const WebSocket = require('ws');
 
 class WebSocketService {
-  constructor(printerService, settingsService) {
+  constructor(printerService, settingsService, ftpService) {
     this.printerService = printerService;
     this.settingsService = settingsService;
+    this.ftpService = ftpService;
     this.wss = null;
     this.port = 8080;
   }
@@ -80,8 +81,61 @@ class WebSocketService {
         }
         break;
 
+      case 'get-printer-files':
+        this.handleGetPrinterFiles(ws, data.payload.printerId);
+        break;
+
+      case 'start-print':
+        this.handleStartPrint(ws, data.payload);
+        break;
+
       default:
         console.log('Unknown message type:', data.type);
+    }
+  }
+
+  async handleGetPrinterFiles(ws, printerId) {
+    try {
+      const printer = this.printerService.getPrinter(printerId);
+      if (!printer) {
+        this.sendResponse(ws, 'error', { message: 'Printer not found' });
+        return;
+      }
+
+      const result = await this.ftpService.getFiles(printer);
+      this.sendResponse(ws, 'printer-files', result);
+    } catch (error) {
+      console.error('Error getting printer files:', error);
+      this.sendResponse(ws, 'error', { 
+        message: 'Failed to get printer files',
+        details: error.message 
+      });
+    }
+  }
+
+  async handleStartPrint(ws, { printerId, fileName }) {
+    try {
+      const printer = this.printerService.getPrinter(printerId);
+      if (!printer) {
+        this.sendResponse(ws, 'error', { message: 'Printer not found' });
+        return;
+      }
+
+      const result = await this.ftpService.startPrint(printer, fileName);
+      this.sendResponse(ws, 'print-started', result);
+      
+      // Broadcast to all clients that a print job has started
+      this.broadcast('print-job-started', {
+        printerId,
+        fileName,
+        printerName: printer.name
+      });
+    } catch (error) {
+      console.error('Error starting print:', error);
+      this.sendResponse(ws, 'error', { 
+        message: 'Failed to start print job',
+        details: error.message 
+      });
     }
   }
 

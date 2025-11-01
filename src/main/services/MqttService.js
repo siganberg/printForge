@@ -153,13 +153,18 @@ class MqttService {
           // Printer is responding, so it's online
           this.broadcastStatus(printer.id, 'online');
           
-          // Extract temperature and progress data if available
+          // Extract temperature, progress and print job data
           const printerData = {
             bedTemp: parsed.print?.bed_temper || 0,
             bedTargetTemp: parsed.print?.bed_target_temper || 0,
             nozzleTemp: parsed.print?.nozzle_temper || 0,
             nozzleTargetTemp: parsed.print?.nozzle_target_temper || 0,
-            progress: parsed.print?.mc_percent || parsed.print?.percent || 0  // Try mc_percent first, then percent
+            progress: parsed.print?.mc_percent || parsed.print?.percent || 0,  // Try mc_percent first, then percent
+            // Print job information
+            projectId: parsed.print?.project_id || '',
+            subtaskName: parsed.print?.subtask_name || '',
+            gcodeFile: parsed.print?.gcode_file || '',
+            gcodeState: parsed.print?.gcode_state || ''
           };
           
           // Broadcast printer data to listeners

@@ -28,10 +28,21 @@
     </div>
 
     <div class="printer-data-info" v-if="printer.status === 'online' && printerData">
+      <!-- Print Job Info -->
+      <div class="print-job-section" v-if="isPrinting">
+        <div class="job-header">
+          <span class="job-label">🖨️ Printing:</span>
+          <span class="job-filename">{{ getJobFilename() }}</span>
+        </div>
+        <div class="job-details" v-if="getPlateDisplay()">
+          <span class="plate-info">{{ getPlateDisplay() }}</span>
+        </div>
+      </div>
+
       <!-- Progress Bar -->
       <div class="progress-section" v-if="printerData && printerData.progress > 0">
         <div class="progress-header">
-          <span class="progress-label">🖨️ Print Progress</span>
+          <span class="progress-label">Progress</span>
           <span class="progress-percentage">{{ Math.round(printerData.progress) }}%</span>
         </div>
         <div class="progress-bar">
@@ -55,6 +66,17 @@
         </div>
       </div>
     </div>
+
+    <!-- Print Button -->
+    <div class="printer-actions">
+      <button 
+        class="print-btn" 
+        :disabled="printer.status !== 'online'"
+        @click="handlePrint"
+      >
+        Print
+      </button>
+    </div>
   </div>
 </template>
 
@@ -73,8 +95,59 @@ export default {
         nozzleTargetTemp: 0,
         bedTemp: 0,
         bedTargetTemp: 0,
-        progress: 0
+        progress: 0,
+        projectId: '',
+        subtaskName: '',
+        gcodeFile: '',
+        gcodeState: ''
       })
+    }
+  },
+  computed: {
+    isPrinting() {
+      return this.printerData && (
+        this.printerData.gcodeState === 'RUNNING' || 
+        this.printerData.gcodeState === 'PAUSE' ||
+        this.printerData.progress > 0
+      )
+    }
+  },
+  methods: {
+    getJobFilename() {
+      if (!this.printerData) return ''
+      
+      const { projectId, gcodeFile } = this.printerData
+      
+      // Follow layer-fleet logic: use project_id if it exists and is non-numeric
+      if (projectId && projectId.trim() !== '' && isNaN(Number(projectId))) {
+        return projectId
+      } else if (gcodeFile && gcodeFile.trim() !== '') {
+        // Extract filename from gcode_file path and remove .gcode extension
+        let filename = gcodeFile.split('/').pop() || gcodeFile
+        if (filename.toLowerCase().endsWith('.gcode')) {
+          filename = filename.slice(0, -6)
+        }
+        return filename
+      }
+      
+      return ''
+    },
+    getPlateDisplay() {
+      if (!this.printerData || !this.printerData.subtaskName) return ''
+      
+      const subtaskName = this.printerData.subtaskName.trim()
+      if (subtaskName === '') return ''
+      
+      // Convert plate_3 to "Plate 3" format
+      if (subtaskName.toLowerCase().startsWith('plate_')) {
+        const plateNumber = subtaskName.split('_')[1]
+        return `Plate ${plateNumber}`
+      }
+      
+      return subtaskName
+    },
+    handlePrint() {
+      this.$emit('open-print-dialog', this.printer)
     }
   }
 }

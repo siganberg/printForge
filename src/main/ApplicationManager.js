@@ -4,14 +4,16 @@ const PrinterService = require('./services/PrinterService');
 const SettingsService = require('./services/SettingsService');
 const WebSocketService = require('./services/WebSocketService');
 const MqttService = require('./services/MqttService');
+const FtpService = require('./services/FtpService');
 
 class ApplicationManager {
   constructor() {
     this.mainWindow = null;
     this.mqttService = new MqttService();
+    this.ftpService = new FtpService();
     this.printerService = new PrinterService(this.mqttService);
     this.settingsService = new SettingsService();
-    this.webSocketService = new WebSocketService(this.printerService, this.settingsService);
+    this.webSocketService = new WebSocketService(this.printerService, this.settingsService, this.ftpService);
   }
 
   async initialize() {
@@ -20,6 +22,7 @@ class ApplicationManager {
     // Initialize services
     this.settingsService.initialize();
     this.mqttService.initialize();
+    this.ftpService.initialize();
     this.printerService.initialize();
     this.webSocketService.initialize();
 
@@ -78,6 +81,7 @@ class ApplicationManager {
     console.log('Shutting down Application Manager...');
     this.webSocketService.close();
     this.mqttService.shutdown();
+    this.ftpService.shutdown();
   }
 }
 

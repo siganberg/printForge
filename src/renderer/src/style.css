@@ -121,6 +121,8 @@ body {
   box-shadow: var(--shadow);
   transition: all 0.2s ease;
   min-height: 320px;
+  display: flex;
+  flex-direction: column;
 }
 
 .printer-card:hover {
@@ -221,6 +223,52 @@ body {
   border-top: 1px solid var(--border-color);
 }
 
+/* Print Job Section */
+.print-job-section {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background-color: var(--bg-secondary);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.job-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.job-label {
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.job-filename {
+  color: var(--accent-color);
+  font-weight: 600;
+  font-size: 0.875rem;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.job-details {
+  margin-top: 0.25rem;
+}
+
+.plate-info {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: var(--bg-primary);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
 /* Progress Section */
 .progress-section {
   margin-bottom: 1rem;
@@ -264,6 +312,37 @@ body {
 /* Temperature Section */
 .temperature-section {
   /* No additional styles needed, inherits from existing temp-row styles */
+}
+
+/* Printer Actions */
+.printer-actions {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.print-btn {
+  width: 100%;
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.print-btn:hover:not(:disabled) {
+  background-color: var(--accent-hover);
+}
+
+.print-btn:disabled {
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+  border: 1px solid var(--border-color);
 }
 
 .temp-row {
@@ -604,4 +683,119 @@ body {
 
 .save-btn:hover {
   background-color: var(--accent-hover);
+}
+
+/* Print Dialog */
+.print-dialog {
+  max-width: 600px;
+  max-height: 80vh;
+}
+
+.file-list-container {
+  min-height: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.loading-state, .error-state, .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border-color);
+  border-top: 3px solid var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-message {
+  color: #dc3545;
+  margin-bottom: 1rem;
+}
+
+.retry-btn {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.retry-btn:hover {
+  background-color: var(--accent-hover);
+}
+
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.file-item:hover {
+  border-color: var(--accent-color);
+  background-color: var(--bg-card);
+}
+
+.file-item.selected {
+  border-color: var(--accent-color);
+  background-color: rgba(0, 123, 255, 0.1);
+}
+
+.file-icon {
+  font-size: 1.5rem;
+  min-width: 24px;
+}
+
+.file-info {
+  flex: 1;
+}
+
+.file-name {
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.file-details {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.modal-footer {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  padding: 1.5rem 2rem;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
 }

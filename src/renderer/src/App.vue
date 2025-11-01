@@ -36,6 +36,7 @@
           :key="printer.id" 
           :printer="printer"
           :printerData="printerData[printer.id]"
+          @open-print-dialog="openPrintDialog"
         />
       </div>
     </main>
@@ -49,18 +50,29 @@
       @update-printer="handleUpdatePrinter"
       @delete-printer="handleDeletePrinter"
     />
+
+    <!-- Print Dialog -->
+    <PrintDialog
+      :isVisible="showPrintDialog"
+      :printerId="selectedPrinterId"
+      :printerName="selectedPrinterName"
+      @close="closePrintDialog"
+      @print-started="handlePrintStarted"
+    />
   </div>
 </template>
 
 <script>
 import PrinterCard from './components/PrinterCard.vue'
 import SettingsModal from './components/SettingsModal.vue'
+import PrintDialog from './components/PrintDialog.vue'
 
 export default {
   name: 'App',
   components: {
     PrinterCard,
-    SettingsModal
+    SettingsModal,
+    PrintDialog
   },
   data() {
     return {
@@ -68,6 +80,9 @@ export default {
       printers: [],
       ws: null,
       showSettings: false,
+      showPrintDialog: false,
+      selectedPrinterId: null,
+      selectedPrinterName: '',
       printerData: {}
     }
   },
@@ -81,6 +96,20 @@ export default {
     },
     closeSettings() {
       this.showSettings = false
+    },
+    openPrintDialog(printer) {
+      this.selectedPrinterId = printer.id
+      this.selectedPrinterName = printer.name
+      this.showPrintDialog = true
+    },
+    closePrintDialog() {
+      this.showPrintDialog = false
+      this.selectedPrinterId = null
+      this.selectedPrinterName = ''
+    },
+    handlePrintStarted(data) {
+      console.log('Print started:', data)
+      // Could show a notification here
     },
     connectWebSocket() {
       this.ws = new WebSocket('ws://localhost:8080')
@@ -146,6 +175,16 @@ export default {
         case 'printer-data-changed':
           console.log('Printer data received:', message.data.printerId, JSON.stringify(message.data.printerData, null, 2))
           this.printerData[message.data.printerId] = message.data.printerData
+          break
+        case 'printer-files':
+          // This will be handled by the PrintDialog's waitForWebSocketResponse
+          break
+        case 'print-started':
+          // This will be handled by the PrintDialog's waitForWebSocketResponse
+          break
+        case 'error':
+          // This will be handled by the PrintDialog's waitForWebSocketResponse
+          console.error('Server error:', message.data)
           break
       }
     },

@@ -14,7 +14,12 @@
     "build:electron": "electron-builder",
     "preview": "vite preview --config src/renderer/vite.config.js"
   },
-  "keywords": ["electron", "vue", "printer", "management"],
+  "keywords": [
+    "electron",
+    "vue",
+    "printer",
+    "management"
+  ],
   "author": "Francis",
   "license": "MIT",
   "devDependencies": {
@@ -27,9 +32,10 @@
     "vite": "^4.4.9"
   },
   "dependencies": {
+    "basic-ftp": "^5.0.5",
+    "mqtt": "^5.3.4",
     "vue": "^3.3.4",
-    "ws": "^8.14.2",
-    "mqtt": "^5.3.4"
+    "ws": "^8.14.2"
   },
   "build": {
     "appId": "com.francis.printforge",
