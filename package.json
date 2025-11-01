@@ -1,0 +1,45 @@
+{
+  "name": "printforge",
+  "version": "1.0.0",
+  "description": "PrintForge - Electron app for printer management with hub-and-spoke architecture",
+  "main": "src/main/main.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:electron\" \"npm run dev:vue\"",
+    "dev:hot": "concurrently \"npm run dev:electron:watch\" \"npm run dev:vue\"",
+    "dev:electron": "cross-env NODE_ENV=development electron .",
+    "dev:electron:watch": "cross-env NODE_ENV=development nodemon --watch src/main --ext js,json --exec \"electron .\"",
+    "dev:vue": "vite --config src/renderer/vite.config.js",
+    "build": "npm run build:vue && npm run build:electron",
+    "build:vue": "vite build --config src/renderer/vite.config.js",
+    "build:electron": "electron-builder",
+    "preview": "vite preview --config src/renderer/vite.config.js"
+  },
+  "keywords": ["electron", "vue", "printer", "management"],
+  "author": "Francis",
+  "license": "MIT",
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.4.0",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4",
+    "nodemon": "^3.0.1",
+    "vite": "^4.4.9"
+  },
+  "dependencies": {
+    "vue": "^3.3.4",
+    "ws": "^8.14.2",
+    "mqtt": "^5.3.4"
+  },
+  "build": {
+    "appId": "com.francis.printforge",
+    "productName": "PrintForge",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/main/**/*",
+      "src/renderer/dist/**/*"
+    ]
+  }
+}

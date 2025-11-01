@@ -1,0 +1,184 @@
+<template>
+  <div class="app-container" :data-theme="theme">
+    <header class="header">
+      <h1>PrintForge</h1>
+      <div class="header-controls">
+        <button class="theme-toggle" @click="toggleTheme" title="Toggle theme">
+          <svg class="icon" viewBox="0 0 24 24" v-if="theme === 'light'">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+          <svg class="icon" viewBox="0 0 24 24" v-else>
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+        </button>
+        <button class="settings-btn" @click="openSettings" title="Settings">
+          <svg class="icon" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="m12 1-3 6-6 3 6 3 3 6 3-6 6-3-6-3-3-6z"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <div class="printers-grid">
+        <PrinterCard 
+          v-for="printer in printers" 
+          :key="printer.id" 
+          :printer="printer"
+          :printerData="printerData[printer.id]"
+        />
+      </div>
+    </main>
+
+    <!-- Settings Modal -->
+    <SettingsModal
+      :isVisible="showSettings"
+      :printers="printers"
+      @close="closeSettings"
+      @add-printer="handleAddPrinter"
+      @update-printer="handleUpdatePrinter"
+      @delete-printer="handleDeletePrinter"
+    />
+  </div>
+</template>
+
+<script>
+import PrinterCard from './components/PrinterCard.vue'
+import SettingsModal from './components/SettingsModal.vue'
+
+export default {
+  name: 'App',
+  components: {
+    PrinterCard,
+    SettingsModal
+  },
+  data() {
+    return {
+      theme: 'light',
+      printers: [],
+      ws: null,
+      showSettings: false,
+      printerData: {}
+    }
+  },
+  methods: {
+    toggleTheme() {
+      this.theme = this.theme === 'light' ? 'dark' : 'light'
+      this.sendMessage('update-settings', { theme: this.theme })
+    },
+    openSettings() {
+      this.showSettings = true
+    },
+    closeSettings() {
+      this.showSettings = false
+    },
+    connectWebSocket() {
+      this.ws = new WebSocket('ws://localhost:8080')
+      
+      this.ws.onopen = () => {
+        console.log('Connected to WebSocket server')
+        this.loadSettings()
+        this.loadPrinters()
+      }
+      
+      this.ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data)
+          console.log('WebSocket received:', JSON.stringify(message, null, 2))
+          this.handleMessage(message)
+        } catch (error) {
+          console.error('Error parsing message:', error)
+        }
+      }
+      
+      this.ws.onclose = () => {
+        console.log('Disconnected from WebSocket server')
+        // Attempt to reconnect after 3 seconds
+        setTimeout(() => {
+          this.connectWebSocket()
+        }, 3000)
+      }
+      
+      this.ws.onerror = (error) => {
+        console.error('WebSocket error:', error)
+      }
+    },
+    handleMessage(message) {
+      switch (message.type) {
+        case 'printers-data':
+          this.printers = message.data
+          break
+        case 'settings-data':
+          this.theme = message.data.theme || 'light'
+          break
+        case 'settings-updated':
+          this.theme = message.data.theme || 'light'
+          break
+        case 'printer-added':
+          this.printers.push(message.data)
+          break
+        case 'printer-updated':
+          const index = this.printers.findIndex(p => p.id === message.data.id)
+          if (index !== -1) {
+            this.printers[index] = message.data
+          }
+          break
+        case 'printer-deleted':
+          this.printers = this.printers.filter(p => p.id !== message.data.id)
+          break
+        case 'printer-status-changed':
+          const printerIndex = this.printers.findIndex(p => p.id === message.data.printerId)
+          if (printerIndex !== -1) {
+            this.printers[printerIndex].status = message.data.status
+            this.printers[printerIndex].lastActivity = new Date().toLocaleTimeString()
+          }
+          break
+        case 'printer-data-changed':
+          console.log('Printer data received:', message.data.printerId, JSON.stringify(message.data.printerData, null, 2))
+          this.printerData[message.data.printerId] = message.data.printerData
+          break
+      }
+    },
+    sendMessage(type, payload = {}) {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        const message = { type, payload }
+        console.log('WebSocket sending:', JSON.stringify(message, null, 2))
+        this.ws.send(JSON.stringify(message))
+      }
+    },
+    loadSettings() {
+      this.sendMessage('get-settings')
+    },
+    loadPrinters() {
+      this.sendMessage('get-printers')
+    },
+    handleAddPrinter(printerData) {
+      this.sendMessage('add-printer', printerData)
+    },
+    handleUpdatePrinter(printerData) {
+      this.sendMessage('update-printer', printerData)
+    },
+    handleDeletePrinter(printerId) {
+      this.sendMessage('delete-printer', { id: printerId })
+    }
+  },
+  mounted() {
+    this.connectWebSocket()
+  },
+  beforeUnmount() {
+    if (this.ws) {
+      this.ws.close()
+    }
+  }
+}
+</script>
