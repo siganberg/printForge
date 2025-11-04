@@ -4,9 +4,9 @@
   "description": "PrintForge - Electron app for printer management with hub-and-spoke architecture",
   "main": "src/main/main.js",
   "scripts": {
-    "dev": "concurrently \"npm run dev:electron\" \"npm run dev:vue\"",
-    "dev:hot": "concurrently \"npm run dev:electron:watch\" \"npm run dev:vue\"",
-    "dev:hot:headless": "concurrently \"npm run dev:headless\" \"npm run dev:vue\"",
+    "dev": "concurrently --raw \"npm run dev:electron\" \"npm run dev:vue\"",
+    "dev:hot": "concurrently --raw \"npm run dev:electron:watch\" \"npm run dev:vue\"",
+    "dev:hot:headless": "concurrently --raw \"npm run dev:headless\" \"npm run dev:vue\"",
     "dev:headless": "cross-env NODE_ENV=development HEADLESS=true nodemon --watch src/main --ext js,json --exec \"electron .\"",
     "dev:electron": "cross-env NODE_ENV=development electron .",
     "dev:electron:watch": "cross-env NODE_ENV=development nodemon --watch src/main --ext js,json --exec \"electron .\"",
