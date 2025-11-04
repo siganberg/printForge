@@ -916,6 +916,11 @@ export default {
   cursor: not-allowed;
 }
 
+.profile-group select option {
+  background-color: var(--button-bg);
+  color: var(--text-color);
+}
+
 .modal-footer {
   display: flex;
   justify-content: center;
