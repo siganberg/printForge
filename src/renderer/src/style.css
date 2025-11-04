@@ -420,7 +420,6 @@ body {
 
 .progress-footer .job-info.idle {
   color: var(--text-secondary);
-  font-style: italic;
 }
 
 /* Temperature Cards */

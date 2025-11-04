@@ -41,7 +41,7 @@
           <span class="job-info" v-if="getJobFilename()">
             {{ getJobFilename() }}<span v-if="getPlateDisplay()"> - {{ getPlateDisplay() }}</span>
           </span>
-          <span class="job-info idle" v-else>✓ Idle - Available</span>
+          <span class="job-info idle" v-else>No Job Running</span>
         </div>
       </div>
     </div>
