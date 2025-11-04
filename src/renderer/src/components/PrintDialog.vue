@@ -309,7 +309,6 @@ export default {
             this.loadingPlates = false
             this.downloadingModel = true
 
-            console.log('No sliced plates found, initiating download and extraction...')
 
             // Request download and extraction
             app.sendMessage('download-and-extract-file', {
@@ -362,20 +361,15 @@ export default {
       // Auto-select matching filament when plate is selected
       const plate = this.plates[index]
 
-      console.log(`🎨 Plate ${plate?.plateIndex || (index + 1)} selected (array index: ${index}) - Required: ${plate?.filamentType || 'Unknown'} (${plate?.filamentColor || 'No color'})`)
-      console.log(`📦 Available filaments:`, this.filaments.map(f => `${f.type} (${f.color})`))
 
       if (plate && plate.filamentType && this.filaments.length > 0) {
         const matchingFilamentIndex = this.findBestMatchingFilament(plate.filamentType, plate.filamentColor)
         if (matchingFilamentIndex !== -1) {
           this.selectedFilamentIndex = matchingFilamentIndex
           const selected = this.filaments[matchingFilamentIndex]
-          console.log(`🎯 Auto-selected filament slot ${selected.slot}: ${selected.type} (${selected.color})`)
         }
       } else if (!plate?.filamentType) {
-        console.log(`ℹ️ Plate has no filament type requirement`)
       } else if (this.filaments.length === 0) {
-        console.log(`⚠️ No filaments available in AMS`)
       }
     },
 
@@ -478,7 +472,6 @@ export default {
           // Use the actual plate number from metadata, not the array index
           const actualPlateIndex = this.selectedPlate.plateIndex
 
-          console.log(`🖨️ Starting print: ${this.selectedFileName}, Plate ${actualPlateIndex}, Filament slot ${filamentId}`)
 
           app.sendMessage('start-print', {
             printerId: this.printerId,

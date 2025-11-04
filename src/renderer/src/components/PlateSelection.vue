@@ -132,7 +132,6 @@ export default {
   watch: {
     isVisible(newVal) {
       if (newVal) {
-        console.log('🔍 PlateSelection opened with props:', {
           printerId: this.printerId,
           printerName: this.printerName, 
           printerModel: this.printerModel,
@@ -144,7 +143,6 @@ export default {
       }
     },
     printerModel(newVal) {
-      console.log('🖨️ printerModel prop changed to:', newVal)
       if (newVal && this.isVisible) {
         this.loadPlates()
       }
@@ -156,7 +154,6 @@ export default {
       this.error = null
       
       try {
-        console.log(`🔍 Loading plates for printer model: ${this.printerModel}, file: ${this.fileName}`)
         
         // Use WebSocket to get plate information
         const app = this.$parent.$parent || this.$root
@@ -167,7 +164,6 @@ export default {
             fileName: this.fileName
           })
           
-          console.log(`📤 Sent get-sliced-file-plates request with printerModel: ${this.printerModel}`)
           
           // Wait for response
           const response = await this.waitForWebSocketResponse('sliced-file-plates')

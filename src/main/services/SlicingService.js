@@ -87,7 +87,6 @@ class SlicingService {
       const buffer = Buffer.from(fileData, 'base64');
       await fs.writeFile(filePath, buffer);
       
-      console.log(`📁 File uploaded: ${fileName} (${buffer.length} bytes)`);
       return { success: true, filePath };
     } catch (error) {
       console.error('❌ Failed to upload file:', error);
@@ -107,7 +106,6 @@ class SlicingService {
         processProfile
       };
 
-      console.log(`🔄 Queuing slice task: ${taskId}`);
 
       // Store the promise callbacks
       this.activeTasks.set(taskId, { resolve, reject });
@@ -121,7 +119,6 @@ class SlicingService {
             console.error(`❌ Slice task failed: ${taskId}`, error);
             callbacks.reject(error);
           } else {
-            console.log(`✅ Slice task completed: ${taskId}`);
             callbacks.resolve(result);
           }
         }
@@ -141,7 +138,6 @@ class SlicingService {
   // Process a single slice task (called by the queue)
   async processSliceTask(taskData, cb) {
     try {
-      console.log(`⚙️ Processing slice task: ${taskData.taskId}`);
       const result = await this.startSlice(taskData.fileName, taskData.printerModel, taskData.machineProfile, taskData.processProfile);
       cb(null, result);
     } catch (error) {
@@ -166,7 +162,6 @@ class SlicingService {
       try {
         await fs.access(outputPath);
         await fs.unlink(outputPath);
-        console.log(`🗑️ Removed existing output file: ${outputPath}`);
       } catch {
         // File doesn't exist, that's fine
       }
@@ -221,28 +216,22 @@ class SlicingService {
         `"${inputPath}"`
       ].join(' ');
 
-      console.log(`🍰 Starting slice: ${fileName}`);
-      console.log(`🔧 Command: ${command}`);
-      console.log(`📁 Input: ${inputPath}`);
-      console.log(`📁 Output: ${outputPath}`);
-      console.log(`📋 Machine Profile: ${machineProfilePath}`);
-      console.log(`📋 Process Profile: ${processProfilePath}`);
+      console.log(`Starting slice: ${fileName}`);
 
       // Execute slicing command
-      const result = await execAsync(command, { 
+      const result = await execAsync(command, {
         timeout: this.SLICE_TIMEOUT,
         cwd: process.cwd()
       });
-      
-      console.log(`🔧 BambuStudio output:`, result.stdout);
-      if (result.stderr) {
-        console.log(`⚠️ BambuStudio stderr:`, result.stderr);
+
+      if (result.stderr && result.stderr.trim()) {
+        console.warn(`BambuStudio stderr:`, result.stderr);
       }
-      
+
       // Verify output file was created
       await fs.access(outputPath);
-      
-      console.log(`✅ Slice completed: ${outputPath}`);
+
+      console.log(`Slice completed: ${fileName}`);
       
       // Extract the .3mf file (it's a zip container)
       await this.extractSlicedFile(outputPath, outputDir);
@@ -315,7 +304,6 @@ class SlicingService {
       }
       
       await fs.rename(sourcePath, failedPath);
-      console.log(`📁 Moved failed file to: ${failedPath}`);
     } catch (error) {
       console.warn(`⚠️ Failed to move file to failed directory: ${error.message}`);
     }
@@ -345,11 +333,9 @@ class SlicingService {
       const zip = new AdmZip(filePath);
       zip.extractAllTo(extractDir, true);
       
-      console.log(`✅ Extracted to: ${extractDir}`);
       
       // List extracted files for verification
       const extractedFiles = await fs.readdir(extractDir);
-      console.log(`📁 Extracted files:`, extractedFiles);
       
       return { success: true, extractPath: extractDir, files: extractedFiles };
     } catch (error) {
@@ -387,10 +373,9 @@ class SlicingService {
 
       // Don't wait for FTP uploads to complete, just queue them
       Promise.allSettled(uploadPromises).then(() => {
-        console.log(`✅ All FTP uploads COMPLETED for model ${printerModel}`);
       });
       
-      console.log(`📤 FTP uploads queued for model ${printerModel}`);
+      console.log(`FTP uploads queued for model ${printerModel}`);
 
     } catch (error) {
       console.error(`❌ Failed to queue FTP uploads for model ${printerModel}:`, error);
@@ -594,13 +579,11 @@ class SlicingService {
       // Build path: sliced/{printerModel}/{filename_without_extension}/extracted/Metadata/
       const metadataPath = path.join(this.slicedPath, normalizedModel, fileNameWithoutExt, 'extracted', 'Metadata');
       
-      console.log(`🔍 Looking for plate images in: ${metadataPath}`);
       
       // Check if the metadata directory exists
       try {
         await fs.access(metadataPath);
       } catch {
-        console.log(`📁 No sliced file found for ${printerModel}/${fileName}`);
         // Return empty plates array to trigger download and extraction
         return {
           plates: [],
@@ -664,7 +647,6 @@ class SlicingService {
         }
       }));
       
-      console.log(`✅ Loaded ${plates.length} plates from sliced file`);
       
       return {
         plates,
@@ -700,7 +682,6 @@ class SlicingService {
       const zip = new AdmZip(localFilePath);
       zip.extractAllTo(extractPath, true);
 
-      console.log(`✅ Extraction complete: ${extractPath}`);
       return { success: true, extractPath };
 
     } catch (error) {
@@ -713,7 +694,6 @@ class SlicingService {
     try {
       const inputPath = path.join(this.uploadedPath, fileName);
       await fs.unlink(inputPath);
-      console.log(`🗑️ Cleaned up input file: ${inputPath}`);
       return { success: true };
     } catch (error) {
       console.warn(`⚠️ Failed to cleanup input file: ${error.message}`);

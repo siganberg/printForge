@@ -381,7 +381,6 @@ export default {
               fileName: this.selectedFile.name
             })
             await this.waitForWebSocketResponse('file-cleaned')
-            console.log('✅ Input file cleaned up after all slices completed')
           } catch (cleanupError) {
             console.warn('⚠️ Failed to cleanup input file:', cleanupError)
             // Don't fail the whole process if cleanup fails

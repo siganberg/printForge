@@ -134,11 +134,9 @@ export default {
       this.showSettings = false
     },
     openPrintDialog(printer) {
-      console.log('🔍 Opening print dialog for printer:', printer)
       this.selectedPrinterId = printer.id
       this.selectedPrinterName = printer.name
       this.selectedPrinterModel = printer.model
-      console.log('📝 Set selectedPrinterModel to:', this.selectedPrinterModel)
       this.showPrintDialog = true
     },
     closePrintDialog() {
@@ -151,11 +149,9 @@ export default {
       this.showSliceDialog = false
     },
     handleSliceStarted(data) {
-      console.log('Slice started:', data)
       // Could show a notification here
     },
     handlePrintStarted(data) {
-      console.log('Print started:', data)
       // Could show a notification here
     },
     sanitizeMessageForLogging(message) {
@@ -181,7 +177,6 @@ export default {
       this.ws = new WebSocket('ws://localhost:8080')
 
       this.ws.onopen = () => {
-        console.log('Connected to WebSocket server')
         this.loadSettings()
         this.loadPrinters()
       }
@@ -189,19 +184,13 @@ export default {
       this.ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data)
-
-          // Create a sanitized version for logging (strip base64 image data)
-          const sanitized = this.sanitizeMessageForLogging(message)
-          console.log('WebSocket received:', JSON.stringify(sanitized, null, 2))
-
           this.handleMessage(message)
         } catch (error) {
-          console.error('Error parsing message:', error)
+          console.error('Error parsing WebSocket message:', error)
         }
       }
 
       this.ws.onclose = () => {
-        console.log('Disconnected from WebSocket server')
         // Attempt to reconnect after 3 seconds
         setTimeout(() => {
           this.connectWebSocket()
@@ -245,7 +234,6 @@ export default {
           const printerId = message.data.printerId
           const changes = message.data.printerData
 
-          console.log('Printer data changes:', printerId, JSON.stringify(changes, null, 2))
 
           // Merge changes with existing data instead of replacing
           if (!this.printerData[printerId]) {
@@ -288,7 +276,6 @@ export default {
     sendMessage(type, payload = {}) {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         const message = { type, payload }
-        console.log('WebSocket sending:', JSON.stringify(message, null, 2))
         this.ws.send(JSON.stringify(message))
       }
     },
