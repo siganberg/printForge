@@ -85,9 +85,8 @@ export default {
   computed: {
     isPrinting() {
       return this.printerData && (
-        this.printerData.gcodeState === 'RUNNING' || 
-        this.printerData.gcodeState === 'PAUSE' ||
-        this.printerData.progress > 0
+        this.printerData.gcodeState === 'RUNNING' ||
+        this.printerData.gcodeState === 'PAUSE'
       )
     }
   },
