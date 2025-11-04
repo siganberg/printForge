@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:electron\" \"npm run dev:vue\"",
     "dev:hot": "concurrently \"npm run dev:electron:watch\" \"npm run dev:vue\"",
+    "dev:hot:headless": "concurrently \"npm run dev:headless\" \"npm run dev:vue\"",
+    "dev:headless": "cross-env NODE_ENV=development HEADLESS=true nodemon --watch src/main --ext js,json --exec \"electron .\"",
     "dev:electron": "cross-env NODE_ENV=development electron .",
     "dev:electron:watch": "cross-env NODE_ENV=development nodemon --watch src/main --ext js,json --exec \"electron .\"",
     "dev:vue": "vite --config src/renderer/vite.config.js",
@@ -32,7 +34,10 @@
     "vite": "^4.4.9"
   },
   "dependencies": {
+    "adm-zip": "^0.5.16",
     "basic-ftp": "^5.0.5",
+    "better-queue": "^3.8.12",
+    "fast-xml-parser": "^5.3.1",
     "mqtt": "^5.3.4",
     "vue": "^3.3.4",
     "ws": "^8.14.2"

@@ -67,6 +67,9 @@ printers.json
 settings.json
 user-preferences.json
 
+# MQTT sample dumps (may contain sensitive printer data)
+samples/
+
 # Temporary files
 tmp/
 temp/

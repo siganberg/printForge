@@ -19,6 +19,11 @@
             <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
           </svg>
         </button>
+        <button class="slice-btn" @click="openSliceDialog" title="Slice File">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+          </svg>
+        </button>
         <button class="settings-btn" @click="openSettings" title="Settings">
           <svg class="icon" viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="3"/>
@@ -31,12 +36,13 @@
 
     <main class="main-content">
       <div class="printers-grid">
-        <PrinterCard 
-          v-for="printer in printers" 
-          :key="printer.id" 
+        <PrinterCard
+          v-for="printer in printers"
+          :key="printer.id"
           :printer="printer"
           :printerData="printerData[printer.id]"
           @open-print-dialog="openPrintDialog"
+          @request-stop-print="handleStopPrintRequest"
         />
       </div>
     </main>
@@ -56,8 +62,26 @@
       :isVisible="showPrintDialog"
       :printerId="selectedPrinterId"
       :printerName="selectedPrinterName"
+      :printerModel="selectedPrinterModel"
+      :printerData="printerData[selectedPrinterId]"
       @close="closePrintDialog"
       @print-started="handlePrintStarted"
+    />
+
+    <!-- Slice Dialog -->
+    <SliceDialog
+      :isVisible="showSliceDialog"
+      :printers="printers"
+      @close="closeSliceDialog"
+      @slice-started="handleSliceStarted"
+    />
+
+    <!-- Confirm Dialog -->
+    <ConfirmDialog
+      :isVisible="showConfirmDialog"
+      :message="confirmDialogMessage"
+      @confirm="handleConfirmYes"
+      @cancel="handleConfirmNo"
     />
   </div>
 </template>
@@ -66,13 +90,17 @@
 import PrinterCard from './components/PrinterCard.vue'
 import SettingsModal from './components/SettingsModal.vue'
 import PrintDialog from './components/PrintDialog.vue'
+import SliceDialog from './components/SliceDialog.vue'
+import ConfirmDialog from './components/ConfirmDialog.vue'
 
 export default {
   name: 'App',
   components: {
     PrinterCard,
     SettingsModal,
-    PrintDialog
+    PrintDialog,
+    SliceDialog,
+    ConfirmDialog
   },
   data() {
     return {
@@ -81,9 +109,14 @@ export default {
       ws: null,
       showSettings: false,
       showPrintDialog: false,
+      showSliceDialog: false,
       selectedPrinterId: null,
       selectedPrinterName: '',
-      printerData: {}
+      selectedPrinterModel: '',
+      printerData: {},
+      showConfirmDialog: false,
+      confirmDialogMessage: '',
+      confirmDialogCallback: null
     }
   },
   methods: {
@@ -94,42 +127,79 @@ export default {
     openSettings() {
       this.showSettings = true
     },
+    openSliceDialog() {
+      this.showSliceDialog = true
+    },
     closeSettings() {
       this.showSettings = false
     },
     openPrintDialog(printer) {
+      console.log('🔍 Opening print dialog for printer:', printer)
       this.selectedPrinterId = printer.id
       this.selectedPrinterName = printer.name
+      this.selectedPrinterModel = printer.model
+      console.log('📝 Set selectedPrinterModel to:', this.selectedPrinterModel)
       this.showPrintDialog = true
     },
     closePrintDialog() {
       this.showPrintDialog = false
       this.selectedPrinterId = null
       this.selectedPrinterName = ''
+      this.selectedPrinterModel = ''
+    },
+    closeSliceDialog() {
+      this.showSliceDialog = false
+    },
+    handleSliceStarted(data) {
+      console.log('Slice started:', data)
+      // Could show a notification here
     },
     handlePrintStarted(data) {
       console.log('Print started:', data)
       // Could show a notification here
     },
+    sanitizeMessageForLogging(message) {
+      // Deep clone the message
+      const sanitized = JSON.parse(JSON.stringify(message))
+
+      // Strip base64 image data from plates
+      if (sanitized.type === 'sliced-file-plates' && sanitized.data && sanitized.data.plates) {
+        sanitized.data.plates = sanitized.data.plates.map(plate => {
+          if (plate.preview && plate.preview.startsWith('data:image')) {
+            return {
+              ...plate,
+              preview: '[BASE64_IMAGE_DATA_STRIPPED]'
+            }
+          }
+          return plate
+        })
+      }
+
+      return sanitized
+    },
     connectWebSocket() {
       this.ws = new WebSocket('ws://localhost:8080')
-      
+
       this.ws.onopen = () => {
         console.log('Connected to WebSocket server')
         this.loadSettings()
         this.loadPrinters()
       }
-      
+
       this.ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data)
-          console.log('WebSocket received:', JSON.stringify(message, null, 2))
+
+          // Create a sanitized version for logging (strip base64 image data)
+          const sanitized = this.sanitizeMessageForLogging(message)
+          console.log('WebSocket received:', JSON.stringify(sanitized, null, 2))
+
           this.handleMessage(message)
         } catch (error) {
           console.error('Error parsing message:', error)
         }
       }
-      
+
       this.ws.onclose = () => {
         console.log('Disconnected from WebSocket server')
         // Attempt to reconnect after 3 seconds
@@ -137,7 +207,7 @@ export default {
           this.connectWebSocket()
         }, 3000)
       }
-      
+
       this.ws.onerror = (error) => {
         console.error('WebSocket error:', error)
       }
@@ -169,18 +239,45 @@ export default {
           const printerIndex = this.printers.findIndex(p => p.id === message.data.printerId)
           if (printerIndex !== -1) {
             this.printers[printerIndex].status = message.data.status
-            this.printers[printerIndex].lastActivity = new Date().toLocaleTimeString()
           }
           break
         case 'printer-data-changed':
-          console.log('Printer data received:', message.data.printerId, JSON.stringify(message.data.printerData, null, 2))
-          this.printerData[message.data.printerId] = message.data.printerData
+          const printerId = message.data.printerId
+          const changes = message.data.printerData
+
+          console.log('Printer data changes:', printerId, JSON.stringify(changes, null, 2))
+
+          // Merge changes with existing data instead of replacing
+          if (!this.printerData[printerId]) {
+            this.printerData[printerId] = {}
+          }
+
+          // Apply only the changed fields
+          this.printerData[printerId] = {
+            ...this.printerData[printerId],
+            ...changes
+          }
           break
         case 'printer-files':
           // This will be handled by the PrintDialog's waitForWebSocketResponse
           break
+        case 'file-plates':
+          // This will be handled by the PlateSelection's waitForWebSocketResponse
+          break
         case 'print-started':
-          // This will be handled by the PrintDialog's waitForWebSocketResponse
+          // This will be handled by the PlateSelection's waitForWebSocketResponse
+          break
+        case 'slice-started':
+          // This will be handled by the SliceDialog's waitForWebSocketResponse
+          break
+        case 'slice-completed':
+          // This will be handled by the SliceDialog's waitForWebSocketResponse
+          break
+        case 'slice-presets':
+          // This will be handled by the SliceDialog's waitForWebSocketResponse
+          break
+        case 'file-cleaned':
+          // This will be handled by the SliceDialog's waitForWebSocketResponse
           break
         case 'error':
           // This will be handled by the PrintDialog's waitForWebSocketResponse
@@ -209,6 +306,26 @@ export default {
     },
     handleDeletePrinter(printerId) {
       this.sendMessage('delete-printer', { id: printerId })
+    },
+    handleStopPrintRequest(printer) {
+      this.showConfirmDialog = true
+      this.confirmDialogMessage = `Are you sure you want to stop the current print on ${printer.name}? This action cannot be undone and will cancel the print job.`
+      this.confirmDialogCallback = () => {
+        this.sendMessage('stop-print', {
+          printerId: printer.id
+        })
+      }
+    },
+    handleConfirmYes() {
+      this.showConfirmDialog = false
+      if (this.confirmDialogCallback) {
+        this.confirmDialogCallback()
+        this.confirmDialogCallback = null
+      }
+    },
+    handleConfirmNo() {
+      this.showConfirmDialog = false
+      this.confirmDialogCallback = null
     }
   },
   mounted() {

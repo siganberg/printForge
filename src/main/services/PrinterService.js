@@ -125,7 +125,7 @@ class PrinterService {
   }
 
   updatePrinterStatus(id, status) {
-    return this.updatePrinter(id, { status, lastActivity: new Date().toLocaleString() });
+    return this.updatePrinter(id, { status });
   }
 
   getOnlineStatus(printerId) {
@@ -140,6 +140,13 @@ class PrinterService {
       return this.mqttService.getAllStatuses();
     }
     return {};
+  }
+
+  getCachedPrinterData(printerId) {
+    if (this.mqttService && this.mqttService.statusCache) {
+      return this.mqttService.statusCache.get(printerId);
+    }
+    return null;
   }
 }
 

@@ -1,80 +1,59 @@
 <template>
-  <div class="printer-card">
+  <div class="printer-card" :class="{ 'printer-disabled': !printer.enabled }">
     <div class="printer-header">
-      <h3 class="printer-name">{{ printer.name }}</h3>
-      <span 
-        class="printer-status" 
+      <div class="printer-title">
+        <h3 class="printer-name">{{ printer.name }} ({{ printer.model }})</h3>
+        <div class="printer-ip">{{ printer.ipAddress }}</div>
+      </div>
+      <span
+        class="printer-status"
         :class="printer.status === 'online' ? 'status-online' : 'status-offline'"
       >
         {{ printer.status }}
       </span>
     </div>
-    
-    <div class="printer-info">
-      <div class="info-row">
-        <span>IP Address:</span>
-        <span>{{ printer.ipAddress }}</span>
-      </div>
-      <div class="info-row">
-        <span>Model:</span>
-        <span>{{ printer.model }}</span>
-      </div>
-      <div class="info-row">
-        <span>Enabled:</span>
-        <span :class="printer.enabled ? 'enabled-true' : 'enabled-false'">
-          {{ printer.enabled ? 'Yes' : 'No' }}
-        </span>
-      </div>
-    </div>
 
     <div class="printer-data-info" v-if="printer.status === 'online' && printerData">
-      <!-- Print Job Info -->
-      <div class="print-job-section" v-if="isPrinting">
-        <div class="job-header">
-          <span class="job-label">🖨️ Printing:</span>
-          <span class="job-filename">{{ getJobFilename() }}</span>
+      <!-- Temperature Cards -->
+      <div class="temperature-cards">
+        <div class="temp-card">
+          <div class="temp-label">Nozzle</div>
+          <div class="temp-current">{{ Math.round(printerData.nozzleTemp) }}°C</div>
+          <div class="temp-target">Target: {{ Math.round(printerData.nozzleTargetTemp) }}°C</div>
         </div>
-        <div class="job-details" v-if="getPlateDisplay()">
-          <span class="plate-info">{{ getPlateDisplay() }}</span>
+        <div class="temp-card">
+          <div class="temp-label">Bed</div>
+          <div class="temp-current">{{ Math.round(printerData.bedTemp) }}°C</div>
+          <div class="temp-target">Target: {{ Math.round(printerData.bedTargetTemp) }}°C</div>
         </div>
       </div>
 
-      <!-- Progress Bar -->
-      <div class="progress-section" v-if="printerData && printerData.progress > 0">
+      <!-- Progress Bar (always shown) -->
+      <div class="progress-section">
         <div class="progress-header">
           <span class="progress-label">Progress</span>
-          <span class="progress-percentage">{{ Math.round(printerData.progress) }}%</span>
+          <span class="progress-percentage">{{ Math.round(printerData.progress || 0) }}%</span>
         </div>
         <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: printerData.progress + '%' }"></div>
+          <div class="progress-fill" :style="{ width: (printerData.progress || 0) + '%' }"></div>
         </div>
-      </div>
-
-      <!-- Temperature Info -->
-      <div class="temperature-section">
-        <div class="temp-row">
-          <span class="temp-label">🔥 Nozzle:</span>
-          <span class="temp-values">
-            {{ Math.round(printerData.nozzleTemp) }}°C / {{ Math.round(printerData.nozzleTargetTemp) }}°C
+        <div class="progress-footer">
+          <span class="job-info" v-if="getJobFilename()">
+            {{ getJobFilename() }}<span v-if="getPlateDisplay()"> - {{ getPlateDisplay() }}</span>
           </span>
-        </div>
-        <div class="temp-row">
-          <span class="temp-label">🛏️ Bed:</span>
-          <span class="temp-values">
-            {{ Math.round(printerData.bedTemp) }}°C / {{ Math.round(printerData.bedTargetTemp) }}°C
-          </span>
+          <span class="job-info idle" v-else>✓ Idle - Available</span>
         </div>
       </div>
     </div>
 
-    <!-- Print Button -->
+    <!-- Print/Stop Button -->
     <div class="printer-actions">
-      <button 
-        class="print-btn" 
+      <button
+        :class="['print-btn', { 'stop-btn': isPrinting }]"
         :disabled="printer.status !== 'online'"
-        @click="handlePrint"
+        @click="isPrinting ? handleStopPrint() : handlePrint()"
       >
-        Print
+        {{ isPrinting ? 'Stop Print' : 'Print' }}
       </button>
     </div>
   </div>
@@ -115,11 +94,33 @@ export default {
   methods: {
     getJobFilename() {
       if (!this.printerData) return ''
-      
-      const { projectId, gcodeFile } = this.printerData
-      
+
+      const { projectId, gcodeFile, subtaskName } = this.printerData
+
+      // First check if subtaskName exists and is not just a plate number
+      if (subtaskName && subtaskName.trim() !== '') {
+        const trimmed = subtaskName.trim()
+
+        // If subtaskName contains "plate_X - filename", extract the filename
+        const match = trimmed.match(/^plate_\d+\s*-\s*(.+)$/i)
+        if (match) {
+          return match[1]
+        }
+
+        // If subtaskName is just "plate_X", skip it and use other sources
+        if (!/^plate_\d+$/i.test(trimmed)) {
+          // Otherwise use subtaskName as-is (it's the actual filename)
+          return trimmed
+        }
+      }
+
       // Follow layer-fleet logic: use project_id if it exists and is non-numeric
       if (projectId && projectId.trim() !== '' && isNaN(Number(projectId))) {
+        // Check if projectId contains "plate_X - filename" format and extract just the filename
+        const match = projectId.match(/^plate_\d+\s*-\s*(.+)$/i)
+        if (match) {
+          return match[1]
+        }
         return projectId
       } else if (gcodeFile && gcodeFile.trim() !== '') {
         // Extract filename from gcode_file path and remove .gcode extension
@@ -129,25 +130,49 @@ export default {
         }
         return filename
       }
-      
+
       return ''
     },
     getPlateDisplay() {
-      if (!this.printerData || !this.printerData.subtaskName) return ''
-      
-      const subtaskName = this.printerData.subtaskName.trim()
-      if (subtaskName === '') return ''
-      
-      // Convert plate_3 to "Plate 3" format
-      if (subtaskName.toLowerCase().startsWith('plate_')) {
-        const plateNumber = subtaskName.split('_')[1]
-        return `Plate ${plateNumber}`
+      if (!this.printerData) return ''
+
+      const { subtaskName, gcodeFile } = this.printerData
+
+      // First check subtaskName for plate info
+      if (subtaskName && subtaskName.trim() !== '') {
+        const trimmed = subtaskName.trim()
+
+        // If subtaskName contains "plate_X - filename", extract plate number
+        const match = trimmed.match(/^plate_(\d+)\s*-\s*.+$/i)
+        if (match) {
+          return `Plate ${match[1]}`
+        }
+
+        // Convert plate_3 format to "Plate 3"
+        if (trimmed.toLowerCase().startsWith('plate_')) {
+          const plateNumber = trimmed.split('_')[1]
+          if (plateNumber && /^\d+$/.test(plateNumber)) {
+            return `Plate ${plateNumber}`
+          }
+        }
       }
-      
-      return subtaskName
+
+      // Fall back to gcodeFile path to extract plate number
+      if (gcodeFile && gcodeFile.includes('plate_')) {
+        const match = gcodeFile.match(/plate_(\d+)/i)
+        if (match) {
+          return `Plate ${match[1]}`
+        }
+      }
+
+      return ''
     },
     handlePrint() {
       this.$emit('open-print-dialog', this.printer)
+    },
+    handleStopPrint() {
+      // Emit event to parent to show confirmation dialog
+      this.$emit('request-stop-print', this.printer)
     }
   }
 }

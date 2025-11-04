@@ -3,6 +3,28 @@ const ApplicationManager = require('./ApplicationManager');
 
 let applicationManager = null;
 
+// Override console.log to add timestamps
+const originalConsoleLog = console.log;
+const originalConsoleError = console.error;
+const originalConsoleWarn = console.warn;
+
+function formatTimestamp() {
+  const now = new Date();
+  return now.toISOString().replace('T', ' ').substring(0, 19);
+}
+
+console.log = (...args) => {
+  originalConsoleLog(`[${formatTimestamp()}]`, ...args);
+};
+
+console.error = (...args) => {
+  originalConsoleError(`[${formatTimestamp()}]`, ...args);
+};
+
+console.warn = (...args) => {
+  originalConsoleWarn(`[${formatTimestamp()}]`, ...args);
+};
+
 // Application entry point
 app.whenReady().then(async () => {
   console.log('PrintForge starting...');
@@ -11,14 +33,15 @@ app.whenReady().then(async () => {
   await applicationManager.initialize();
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
+    if (BrowserWindow.getAllWindows().length === 0 && process.env.HEADLESS !== 'true') {
       applicationManager.createWindow();
     }
   });
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+  // Don't quit in headless mode or on macOS
+  if (process.platform !== 'darwin' && process.env.HEADLESS !== 'true') {
     app.quit();
   }
 });
