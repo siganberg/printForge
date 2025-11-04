@@ -597,7 +597,7 @@ export default {
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
-  background-color: var(--card-bg);
+  background-color: var(--bg-secondary);
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -645,7 +645,7 @@ export default {
   padding: 1rem;
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  background-color: var(--card-bg);
+  background-color: var(--bg-secondary);
   margin-bottom: 1rem;
 }
 
@@ -838,7 +838,7 @@ export default {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 1rem;
-  background-color: var(--card-bg);
+  background-color: var(--bg-secondary);
   transition: all 0.2s;
 }
 
