@@ -13,18 +13,18 @@
       </span>
     </div>
 
-    <div class="printer-data-info" v-if="printer.status === 'online' && printerData">
+    <div class="printer-data-info">
       <!-- Temperature Cards -->
       <div class="temperature-cards">
         <div class="temp-card">
           <div class="temp-label">Nozzle</div>
-          <div class="temp-current">{{ Math.round(printerData.nozzleTemp) }}°C</div>
-          <div class="temp-target">Target: {{ Math.round(printerData.nozzleTargetTemp) }}°C</div>
+          <div class="temp-current">{{ getNozzleTemp() }}</div>
+          <div class="temp-target">Target: {{ getNozzleTargetTemp() }}</div>
         </div>
         <div class="temp-card">
           <div class="temp-label">Bed</div>
-          <div class="temp-current">{{ Math.round(printerData.bedTemp) }}°C</div>
-          <div class="temp-target">Target: {{ Math.round(printerData.bedTargetTemp) }}°C</div>
+          <div class="temp-current">{{ getBedTemp() }}</div>
+          <div class="temp-target">Target: {{ getBedTargetTemp() }}</div>
         </div>
       </div>
 
@@ -32,10 +32,10 @@
       <div class="progress-section">
         <div class="progress-header">
           <span class="progress-label">Progress</span>
-          <span class="progress-percentage">{{ Math.round(printerData.progress || 0) }}%</span>
+          <span class="progress-percentage">{{ getProgress() }}%</span>
         </div>
         <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: (printerData.progress || 0) + '%' }"></div>
+          <div class="progress-fill" :style="{ width: getProgress() + '%' }"></div>
         </div>
         <div class="progress-footer">
           <span class="job-info" v-if="getJobFilename()">
@@ -92,6 +92,36 @@ export default {
     }
   },
   methods: {
+    getNozzleTemp() {
+      if (this.printer.status !== 'online' || !this.printerData) {
+        return '--°C'
+      }
+      return `${Math.round(this.printerData.nozzleTemp)}°C`
+    },
+    getNozzleTargetTemp() {
+      if (this.printer.status !== 'online' || !this.printerData) {
+        return 'Target: --°C'
+      }
+      return `Target: ${Math.round(this.printerData.nozzleTargetTemp)}°C`
+    },
+    getBedTemp() {
+      if (this.printer.status !== 'online' || !this.printerData) {
+        return '--°C'
+      }
+      return `${Math.round(this.printerData.bedTemp)}°C`
+    },
+    getBedTargetTemp() {
+      if (this.printer.status !== 'online' || !this.printerData) {
+        return 'Target: --°C'
+      }
+      return `Target: ${Math.round(this.printerData.bedTargetTemp)}°C`
+    },
+    getProgress() {
+      if (this.printer.status !== 'online' || !this.printerData) {
+        return 0
+      }
+      return Math.round(this.printerData.progress || 0)
+    },
     getJobFilename() {
       if (!this.printerData) return ''
 
