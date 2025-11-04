@@ -99,9 +99,13 @@ export default {
     },
     getNozzleTargetTemp() {
       if (this.printer.status !== 'online' || !this.printerData) {
-        return 'Target: --°C'
+        return '--°C'
       }
-      return `Target: ${Math.round(this.printerData.nozzleTargetTemp)}°C`
+      const temp = this.printerData.nozzleTargetTemp
+      if (temp === null || temp === undefined || isNaN(temp)) {
+        return '--°C'
+      }
+      return `${Math.round(temp)}°C`
     },
     getBedTemp() {
       if (this.printer.status !== 'online' || !this.printerData) {
@@ -111,9 +115,13 @@ export default {
     },
     getBedTargetTemp() {
       if (this.printer.status !== 'online' || !this.printerData) {
-        return 'Target: --°C'
+        return '--°C'
       }
-      return `Target: ${Math.round(this.printerData.bedTargetTemp)}°C`
+      const temp = this.printerData.bedTargetTemp
+      if (temp === null || temp === undefined || isNaN(temp)) {
+        return '--°C'
+      }
+      return `${Math.round(temp)}°C`
     },
     getProgress() {
       if (this.printer.status !== 'online' || !this.printerData) {
