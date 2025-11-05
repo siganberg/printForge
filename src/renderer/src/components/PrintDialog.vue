@@ -395,21 +395,40 @@ export default {
           }
 
           if (requiredColor) {
-            let closestMatch = matchingTypeFilaments[0]
-            let closestDistance = this.calculateColorDistance(requiredColor, closestMatch.filament.color)
+            // Calculate distances for all matching type filaments
+            const filamentsWithDistance = matchingTypeFilaments.map(({ filament, index }) => ({
+              filament,
+              index,
+              distance: this.calculateColorDistance(requiredColor, filament.color)
+            }))
 
-            for (let i = 1; i < matchingTypeFilaments.length; i++) {
-              const distance = this.calculateColorDistance(requiredColor, matchingTypeFilaments[i].filament.color)
-              if (distance < closestDistance) {
-                closestDistance = distance
-                closestMatch = matchingTypeFilaments[i]
+            // Find the minimum distance
+            const minDistance = Math.min(...filamentsWithDistance.map(f => f.distance))
+
+            // Get all filaments with the closest color
+            const closestColorFilaments = filamentsWithDistance.filter(f => f.distance === minDistance)
+
+            // Priority 2.5: If multiple filaments have the same closest color, use lastSelectedFilamentIndex
+            if (closestColorFilaments.length > 1) {
+              const lastIndex = this.printer?.lastSelectedFilamentIndex
+              const matchingLast = closestColorFilaments.find(f => f.index === lastIndex)
+              if (matchingLast) {
+                return matchingLast.index
               }
             }
 
-            return closestMatch.index
+            // Return the first filament with closest color
+            return closestColorFilaments[0].index
           }
 
-          // If no color specified, return first matching type
+          // If no color specified, check if lastSelectedFilamentIndex is among matching types
+          const lastIndex = this.printer?.lastSelectedFilamentIndex
+          const matchingLast = matchingTypeFilaments.find(f => f.index === lastIndex)
+          if (matchingLast) {
+            return matchingLast.index
+          }
+
+          // Return first matching type
           return matchingTypeFilaments[0].index
         }
       }
