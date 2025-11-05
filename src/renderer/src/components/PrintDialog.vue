@@ -490,6 +490,11 @@ export default {
     selectFilament(index) {
       this.selectedFilamentIndex = index
 
+      // Update local printer object immediately for instant feedback
+      if (this.printer) {
+        this.printer.lastSelectedFilamentIndex = index
+      }
+
       // Save filament preference to backend
       const app = this.$parent.$parent || this.$root
       if (app.sendMessage) {

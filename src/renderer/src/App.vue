@@ -252,6 +252,13 @@ export default {
             ...changes
           }
           break
+        case 'filament-preference-saved':
+          // Update local printer object with new lastSelectedFilamentIndex
+          const printerIdx = this.printers.findIndex(p => p.id === message.data.printerId)
+          if (printerIdx !== -1) {
+            this.printers[printerIdx].lastSelectedFilamentIndex = message.data.filamentIndex
+          }
+          break
         case 'printer-files':
           // This will be handled by the PrintDialog's waitForWebSocketResponse
           break
