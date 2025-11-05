@@ -408,13 +408,11 @@ export default {
             // Get all filaments with the closest color
             const closestColorFilaments = filamentsWithDistance.filter(f => f.distance === minDistance)
 
-            // Priority 2.5: If multiple filaments have the same closest color, use lastSelectedFilamentIndex
-            if (closestColorFilaments.length > 1) {
-              const lastIndex = this.printer?.lastSelectedFilamentIndex
-              const matchingLast = closestColorFilaments.find(f => f.index === lastIndex)
-              if (matchingLast) {
-                return matchingLast.index
-              }
+            // Priority 2.5: If lastSelectedFilamentIndex is among the closest color matches, use it
+            const lastIndex = this.printer?.lastSelectedFilamentIndex
+            const matchingLast = closestColorFilaments.find(f => f.index === lastIndex)
+            if (matchingLast) {
+              return matchingLast.index
             }
 
             // Return the first filament with closest color
