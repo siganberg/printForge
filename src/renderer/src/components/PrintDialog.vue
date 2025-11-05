@@ -179,6 +179,10 @@ export default {
     printerData: {
       type: Object,
       default: () => ({})
+    },
+    printer: {
+      type: Object,
+      default: () => ({})
     }
   },
   data() {
@@ -374,41 +378,50 @@ export default {
     },
 
     findBestMatchingFilament(requiredType, requiredColor) {
-      if (!requiredType || !this.filaments.length) return 0
-
-      // Find all filaments matching the required type
-      const matchingTypeFilaments = this.filaments
-        .map((filament, index) => ({ filament, index }))
-        .filter(({ filament }) => filament.type.toUpperCase() === requiredType.toUpperCase())
-
-      if (matchingTypeFilaments.length === 0) {
-        console.warn(`⚠️ No filament found matching type: ${requiredType}`)
-        return 0 // Return first filament as fallback
+      if (!this.filaments.length) {
+        return 0
       }
 
-      // If only one matching type, use it
-      if (matchingTypeFilaments.length === 1) {
-        return matchingTypeFilaments[0].index
-      }
+      // Priority 1: Match by Filament Type
+      if (requiredType) {
+        const matchingTypeFilaments = this.filaments
+          .map((filament, index) => ({ filament, index }))
+          .filter(({ filament }) => filament.type.toUpperCase() === requiredType.toUpperCase())
 
-      // If multiple matching types, find closest color
-      if (requiredColor) {
-        let closestMatch = matchingTypeFilaments[0]
-        let closestDistance = this.calculateColorDistance(requiredColor, closestMatch.filament.color)
-
-        for (let i = 1; i < matchingTypeFilaments.length; i++) {
-          const distance = this.calculateColorDistance(requiredColor, matchingTypeFilaments[i].filament.color)
-          if (distance < closestDistance) {
-            closestDistance = distance
-            closestMatch = matchingTypeFilaments[i]
+        if (matchingTypeFilaments.length > 0) {
+          // Priority 2: If multiple type matches, find closest color
+          if (matchingTypeFilaments.length === 1) {
+            return matchingTypeFilaments[0].index
           }
-        }
 
-        return closestMatch.index
+          if (requiredColor) {
+            let closestMatch = matchingTypeFilaments[0]
+            let closestDistance = this.calculateColorDistance(requiredColor, closestMatch.filament.color)
+
+            for (let i = 1; i < matchingTypeFilaments.length; i++) {
+              const distance = this.calculateColorDistance(requiredColor, matchingTypeFilaments[i].filament.color)
+              if (distance < closestDistance) {
+                closestDistance = distance
+                closestMatch = matchingTypeFilaments[i]
+              }
+            }
+
+            return closestMatch.index
+          }
+
+          // If no color specified, return first matching type
+          return matchingTypeFilaments[0].index
+        }
       }
 
-      // Return first matching type if no color specified
-      return matchingTypeFilaments[0].index
+      // Priority 3: Use persistent selected index as fallback
+      const lastIndex = this.printer?.lastSelectedFilamentIndex
+      if (lastIndex !== undefined && lastIndex !== null && lastIndex >= 0 && lastIndex < this.filaments.length) {
+        return lastIndex
+      }
+
+      // Final fallback: return first filament
+      return 0
     },
 
     calculateColorDistance(color1, color2) {
@@ -456,6 +469,15 @@ export default {
 
     selectFilament(index) {
       this.selectedFilamentIndex = index
+
+      // Save filament preference to backend
+      const app = this.$parent.$parent || this.$root
+      if (app.sendMessage) {
+        app.sendMessage('save-filament-preference', {
+          printerId: this.printerId,
+          filamentIndex: index
+        })
+      }
     },
 
     async startPrint() {

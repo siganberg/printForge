@@ -64,6 +64,7 @@
       :printerName="selectedPrinterName"
       :printerModel="selectedPrinterModel"
       :printerData="printerData[selectedPrinterId]"
+      :printer="selectedPrinter"
       @close="closePrintDialog"
       @print-started="handlePrintStarted"
     />
@@ -117,6 +118,11 @@ export default {
       showConfirmDialog: false,
       confirmDialogMessage: '',
       confirmDialogCallback: null
+    }
+  },
+  computed: {
+    selectedPrinter() {
+      return this.printers.find(p => p.id === this.selectedPrinterId) || {}
     }
   },
   methods: {

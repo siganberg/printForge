@@ -157,6 +157,10 @@ class WebSocketService {
         this.handleGetFtpQueueStats(ws);
         break;
 
+      case 'save-filament-preference':
+        this.handleSaveFilamentPreference(ws, data.payload);
+        break;
+
       default:
         console.log('Unknown message type:', data.type);
     }
@@ -414,9 +418,32 @@ class WebSocketService {
       this.sendResponse(ws, 'ftp-queue-stats', stats);
     } catch (error) {
       console.error('Error getting FTP queue stats:', error);
-      this.sendResponse(ws, 'error', { 
+      this.sendResponse(ws, 'error', {
         message: 'Failed to get FTP queue statistics',
-        details: error.message 
+        details: error.message
+      });
+    }
+  }
+
+  async handleSaveFilamentPreference(ws, { printerId, filamentIndex }) {
+    try {
+      const updatedPrinter = this.printerService.updatePrinter(printerId, {
+        lastSelectedFilamentIndex: filamentIndex
+      });
+
+      if (updatedPrinter) {
+        this.sendResponse(ws, 'filament-preference-saved', {
+          printerId,
+          filamentIndex
+        });
+      } else {
+        this.sendResponse(ws, 'error', { message: 'Printer not found' });
+      }
+    } catch (error) {
+      console.error('Error saving filament preference:', error);
+      this.sendResponse(ws, 'error', {
+        message: 'Failed to save filament preference',
+        details: error.message
       });
     }
   }
