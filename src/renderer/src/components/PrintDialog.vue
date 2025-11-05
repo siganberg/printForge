@@ -382,63 +382,66 @@ export default {
         return 0
       }
 
-      // Priority 1: Match by Filament Type
+      // Step 1: Filter by filament type
+      let candidateFilaments = this.filaments.map((filament, index) => ({ filament, index }))
+
       if (requiredType) {
-        const matchingTypeFilaments = this.filaments
-          .map((filament, index) => ({ filament, index }))
-          .filter(({ filament }) => filament.type.toUpperCase() === requiredType.toUpperCase())
+        candidateFilaments = candidateFilaments.filter(
+          ({ filament }) => filament.type.toUpperCase() === requiredType.toUpperCase()
+        )
+      }
 
-        if (matchingTypeFilaments.length > 0) {
-          // Priority 2: If multiple type matches, find closest color
-          if (matchingTypeFilaments.length === 1) {
-            return matchingTypeFilaments[0].index
-          }
+      // If no type matches, use all filaments as candidates
+      if (candidateFilaments.length === 0) {
+        candidateFilaments = this.filaments.map((filament, index) => ({ filament, index }))
+      }
 
-          if (requiredColor) {
-            // Calculate distances for all matching type filaments
-            const filamentsWithDistance = matchingTypeFilaments.map(({ filament, index }) => ({
-              filament,
-              index,
-              distance: this.calculateColorDistance(requiredColor, filament.color)
-            }))
+      // If only one candidate, return it
+      if (candidateFilaments.length === 1) {
+        return candidateFilaments[0].index
+      }
 
-            // Find the minimum distance
-            const minDistance = Math.min(...filamentsWithDistance.map(f => f.distance))
+      // Step 2: Calculate color distances and assign scores
+      const highestScore = candidateFilaments.length
+      const filamentsWithScores = candidateFilaments.map(({ filament, index }) => ({
+        filament,
+        index,
+        distance: requiredColor ? this.calculateColorDistance(requiredColor, filament.color) : 0,
+        score: 0
+      }))
 
-            // Get all filaments with the closest color
-            const closestColorFilaments = filamentsWithDistance.filter(f => f.distance === minDistance)
+      // Sort by distance (closest first)
+      filamentsWithScores.sort((a, b) => a.distance - b.distance)
 
-            // Priority 2.5: If lastSelectedFilamentIndex is among the closest color matches, use it
-            const lastIndex = this.printer?.lastSelectedFilamentIndex
-            const matchingLast = closestColorFilaments.find(f => f.index === lastIndex)
-            if (matchingLast) {
-              return matchingLast.index
-            }
+      // Assign scores based on color ranking
+      let currentDistance = filamentsWithScores[0].distance
+      let currentScore = highestScore
 
-            // Return the first filament with closest color
-            return closestColorFilaments[0].index
-          }
+      for (let i = 0; i < filamentsWithScores.length; i++) {
+        const filament = filamentsWithScores[i]
 
-          // If no color specified, check if lastSelectedFilamentIndex is among matching types
-          const lastIndex = this.printer?.lastSelectedFilamentIndex
-          const matchingLast = matchingTypeFilaments.find(f => f.index === lastIndex)
-          if (matchingLast) {
-            return matchingLast.index
-          }
+        // If distance changed, decrease score
+        if (filament.distance > currentDistance) {
+          currentDistance = filament.distance
+          currentScore--
+        }
 
-          // Return first matching type
-          return matchingTypeFilaments[0].index
+        filament.score = currentScore
+      }
+
+      // Step 3: Add bonus point for lastSelectedFilamentIndex
+      const lastIndex = this.printer?.lastSelectedFilamentIndex
+      if (lastIndex !== undefined && lastIndex !== null) {
+        const matchingFilament = filamentsWithScores.find(f => f.index === lastIndex)
+        if (matchingFilament) {
+          matchingFilament.score += 1
         }
       }
 
-      // Priority 3: Use persistent selected index as fallback
-      const lastIndex = this.printer?.lastSelectedFilamentIndex
-      if (lastIndex !== undefined && lastIndex !== null && lastIndex >= 0 && lastIndex < this.filaments.length) {
-        return lastIndex
-      }
+      // Step 4: Find filament with highest score
+      filamentsWithScores.sort((a, b) => b.score - a.score)
 
-      // Final fallback: return first filament
-      return 0
+      return filamentsWithScores[0].index
     },
 
     calculateColorDistance(color1, color2) {
