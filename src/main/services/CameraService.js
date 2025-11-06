@@ -198,7 +198,7 @@ class CameraService {
     return (model.includes('a1') || serial.startsWith('039')) ? 'a1' : 'x1';
   }
 
-  handleCameraStream(ws, printerId) {
+  handleCameraStream(ws, printerId, req = null) {
     const printer = this.printerService.getPrinter(printerId);
 
     if (!printer) {
@@ -240,11 +240,16 @@ class CameraService {
       if (this.rtspProxy) {
         const handler = this.rtspProxy({
           url: cameraUrl,
-          verbose: false,
+          verbose: true,
           transport: 'tcp'
         });
 
-        handler(ws);
+        // Pass both ws and req for proper rtsp-relay handling
+        if (req) {
+          handler(ws, req);
+        } else {
+          handler(ws);
+        }
       } else {
         console.error('📹 RTSP proxy not available');
         ws.close(1011, 'RTSP streaming not available');

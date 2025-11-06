@@ -1,4 +1,5 @@
-const WebSocket = require('ws');
+const express = require('express');
+const expressWs = require('express-ws');
 
 class WebSocketService {
   constructor(printerService, settingsService, ftpService, slicingService, presetsService, mqttService, cameraService) {
@@ -9,32 +10,41 @@ class WebSocketService {
     this.presetsService = presetsService;
     this.mqttService = mqttService;
     this.cameraService = cameraService;
-    this.wss = null;
+    this.app = null;
+    this.server = null;
+    this.wsClients = new Set();
     this.port = 8080;
   }
 
   initialize() {
-    this.wss = new WebSocket.Server({ port: this.port });
+    // Create Express app
+    this.app = express();
 
-    this.wss.on('connection', (ws, req) => {
-      const url = req.url || '';
+    // Enable WebSocket support
+    const wsInstance = expressWs(this.app);
 
-      // Check if this is a camera stream request
-      if (url.startsWith('/camera/')) {
-        const printerId = url.split('/').pop();
-        console.log(`📹 Camera stream requested for printer: ${printerId}`);
+    // Initialize camera service with Express app for rtsp-relay
+    if (this.cameraService) {
+      this.cameraService.initialize(this.app);
+    }
 
-        if (this.cameraService) {
-          this.cameraService.handleCameraStream(ws, printerId);
-        } else {
-          console.error('📹 Camera service not available');
-          ws.close(1011, 'Camera service not available');
-        }
-        return;
+    // Camera stream endpoint
+    this.app.ws('/camera/:printerId', (ws, req) => {
+      const printerId = req.params.printerId;
+      console.log(`📹 Camera stream requested for printer: ${printerId}`);
+
+      if (this.cameraService) {
+        this.cameraService.handleCameraStream(ws, printerId, req);
+      } else {
+        console.error('📹 Camera service not available');
+        ws.close(1011, 'Camera service not available');
       }
+    });
 
-      // Regular WebSocket connection for app data
+    // Main WebSocket endpoint for app data
+    this.app.ws('/', (ws, req) => {
       console.log('Client connected to WebSocket');
+      this.wsClients.add(ws);
 
       ws.on('message', (message) => {
         try {
@@ -47,6 +57,7 @@ class WebSocketService {
 
       ws.on('close', () => {
         console.log('Client disconnected from WebSocket');
+        this.wsClients.delete(ws);
       });
 
       ws.on('error', (error) => {
@@ -54,12 +65,10 @@ class WebSocketService {
       });
     });
 
-    // Initialize camera service with rtsp-relay
-    if (this.cameraService) {
-      this.cameraService.initialize(this.wss);
-    }
-
-    console.log(`WebSocket server started on port ${this.port}`);
+    // Start Express server
+    this.server = this.app.listen(this.port, () => {
+      console.log(`WebSocket server started on port ${this.port}`);
+    });
   }
 
   handleMessage(ws, data) {
@@ -472,16 +481,24 @@ class WebSocketService {
   }
 
   sendResponse(ws, type, data) {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type, data }));
+    if (ws.readyState === 1) { // 1 = OPEN
+      try {
+        ws.send(JSON.stringify({ type, data }));
+      } catch (error) {
+        console.error('Error sending response:', error);
+      }
     }
   }
 
   broadcast(type, data) {
     const message = JSON.stringify({ type, data });
-    this.wss.clients.forEach((client) => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(message);
+    this.wsClients.forEach((client) => {
+      if (client.readyState === 1) { // 1 = OPEN in express-ws
+        try {
+          client.send(message);
+        } catch (error) {
+          console.error('Error broadcasting message:', error);
+        }
       }
     });
   }
@@ -519,8 +536,8 @@ class WebSocketService {
   }
 
   close() {
-    if (this.wss) {
-      this.wss.close();
+    if (this.server) {
+      this.server.close();
       console.log('WebSocket server closed');
     }
   }
