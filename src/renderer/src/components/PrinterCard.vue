@@ -31,7 +31,6 @@
       <!-- Progress Bar (always shown) -->
       <div class="progress-section">
         <div class="progress-header">
-          <span class="progress-label">Progress</span>
           <span class="progress-layers">{{ getLayersDisplay() }}</span>
           <span class="progress-percentage">{{ getProgress() }}%</span>
         </div>

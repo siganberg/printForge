@@ -343,16 +343,10 @@ body {
   height: 21px;
 }
 
-.progress-label {
-  color: var(--text-primary);
-  font-weight: 500;
-  font-size: 0.875rem;
-}
-
 .progress-layers {
-  color: var(--text-secondary);
+  color: var(--text-primary);
   font-size: 0.875rem;
-  font-weight: 400;
+  font-weight: 500;
 }
 
 .progress-percentage {
