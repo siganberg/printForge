@@ -1,17 +1,23 @@
 <template>
-  <div class="printer-card" :class="{ 'printer-disabled': !printer.enabled }">
-    <div class="printer-header">
-      <div class="printer-title">
-        <h3 class="printer-name">{{ printer.name }} ({{ printer.model }})</h3>
-        <div class="printer-ip">{{ printer.ipAddress }}</div>
+  <div class="printer-card-container" :class="{ 'is-flipped': isFlipped }">
+    <div class="printer-card printer-card-front" :class="{ 'printer-disabled': !printer.enabled }">
+      <div class="printer-header">
+        <div class="printer-title">
+          <h3 class="printer-name">{{ printer.name }} ({{ printer.model }})</h3>
+          <div class="printer-ip-row">
+            <span class="printer-ip">{{ printer.ipAddress }}</span>
+            <button class="camera-icon-btn" @click="toggleFlip" title="View Camera">
+              📷
+            </button>
+          </div>
+        </div>
+        <span
+          class="printer-status"
+          :class="printer.status === 'online' ? 'status-online' : 'status-offline'"
+        >
+          {{ printer.status }}
+        </span>
       </div>
-      <span
-        class="printer-status"
-        :class="printer.status === 'online' ? 'status-online' : 'status-offline'"
-      >
-        {{ printer.status }}
-      </span>
-    </div>
 
     <div class="printer-data-info">
       <!-- Temperature Cards -->
@@ -46,15 +52,31 @@
       </div>
     </div>
 
-    <!-- Print/Stop Button -->
-    <div class="printer-actions">
-      <button
-        :class="['print-btn', { 'stop-btn': isPrinting }]"
-        :disabled="printer.status !== 'online'"
-        @click="isPrinting ? handleStopPrint() : handlePrint()"
-      >
-        {{ isPrinting ? 'Stop Print' : 'Print' }}
-      </button>
+      <!-- Print/Stop Button -->
+      <div class="printer-actions">
+        <button
+          :class="['print-btn', { 'stop-btn': isPrinting }]"
+          :disabled="printer.status !== 'online'"
+          @click="isPrinting ? handleStopPrint() : handlePrint()"
+        >
+          {{ isPrinting ? 'Stop Print' : 'Print' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Back of Card -->
+    <div class="printer-card printer-card-back">
+      <div class="printer-header">
+        <div class="printer-title">
+          <h3 class="printer-name">{{ printer.name }} - Camera</h3>
+        </div>
+        <button class="back-btn" @click="toggleFlip" title="Back to Printer Info">
+          ✕
+        </button>
+      </div>
+      <div class="camera-content">
+        <!-- Camera content will go here -->
+      </div>
     </div>
   </div>
 </template>
@@ -82,6 +104,11 @@ export default {
       })
     }
   },
+  data() {
+    return {
+      isFlipped: false
+    }
+  },
   computed: {
     isPrinting() {
       return this.printerData && (
@@ -91,6 +118,9 @@ export default {
     }
   },
   methods: {
+    toggleFlip() {
+      this.isFlipped = !this.isFlipped
+    },
     getNozzleTemp() {
       if (this.printer.status !== 'online' || !this.printerData) {
         return '--°C'
