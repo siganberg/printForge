@@ -125,6 +125,7 @@ export default {
     return {
       isFlipped: false,
       cameraWs: null,
+      cameraPlayer: null,
       cameraConnected: false,
       cameraConnecting: false,
       cameraError: null
@@ -141,12 +142,17 @@ export default {
   methods: {
     toggleFlip() {
       this.isFlipped = !this.isFlipped
-      if (!this.isFlipped) {
-        // Disconnecting camera when flipping back
+      if (this.isFlipped) {
+        // Auto-connect camera when flipping to camera view
+        this.$nextTick(() => {
+          this.connectCamera()
+        })
+      } else {
+        // Disconnect camera when flipping back
         this.disconnectCamera()
       }
     },
-    connectCamera() {
+    async connectCamera() {
       if (this.cameraConnecting || this.cameraConnected) return
 
       if (this.printer.status !== 'online') {
@@ -157,15 +163,6 @@ export default {
       this.cameraConnecting = true
       this.cameraError = null
 
-      // Connect to camera WebSocket
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const wsUrl = `${wsProtocol}//localhost:8080/camera/${this.printer.id}`
-
-      console.log(`📹 Connecting to camera: ${wsUrl}`)
-
-      this.cameraWs = new WebSocket(wsUrl)
-      this.cameraWs.binaryType = 'arraybuffer'
-
       const canvas = this.$refs.cameraCanvas
       if (!canvas) {
         this.cameraError = 'Canvas not available'
@@ -173,10 +170,32 @@ export default {
         return
       }
 
+      // Determine camera type based on printer model
+      const isA1Model = this.printer.model?.toLowerCase().includes('a1') ||
+                        this.printer.serialNo?.toLowerCase().startsWith('039')
+
+      // Connect to camera WebSocket
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const wsUrl = `${wsProtocol}//localhost:8080/camera/${this.printer.id}`
+
+      console.log(`📹 Connecting to camera (${isA1Model ? 'A1' : 'X1'}): ${wsUrl}`)
+
+      if (isA1Model) {
+        // A1 model - direct JPEG frames
+        this.connectA1Camera(wsUrl, canvas)
+      } else {
+        // X1 Carbon - RTSP stream with player
+        await this.connectRtspCamera(wsUrl, canvas)
+      }
+    },
+    connectA1Camera(wsUrl, canvas) {
+      this.cameraWs = new WebSocket(wsUrl)
+      this.cameraWs.binaryType = 'arraybuffer'
+
       const ctx = canvas.getContext('2d')
 
       this.cameraWs.onopen = () => {
-        console.log('📹 Camera WebSocket connected')
+        console.log('📹 [A1] Camera WebSocket connected')
         this.cameraConnected = true
         this.cameraConnecting = false
       }
@@ -203,26 +222,120 @@ export default {
       }
 
       this.cameraWs.onerror = (err) => {
-        console.error('📹 Camera WebSocket error:', err)
+        console.error('📹 [A1] Camera WebSocket error:', err)
         this.cameraError = 'Camera connection failed'
         this.cameraConnecting = false
       }
 
       this.cameraWs.onclose = () => {
-        console.log('📹 Camera WebSocket closed')
+        console.log('📹 [A1] Camera WebSocket closed')
         this.cameraConnected = false
         if (!this.cameraError) {
           this.cameraError = 'Camera connection closed'
         }
       }
     },
+    async connectRtspCamera(wsUrl, canvas) {
+      try {
+        // Load RTSP player script if not already loaded
+        if (!window.loadPlayer) {
+          console.log('📹 [RTSP] Loading RTSP player...')
+          await this.loadRtspScript()
+        }
+
+        if (window.loadPlayer && canvas) {
+          console.log('📹 [RTSP] Initializing RTSP player for:', wsUrl)
+
+          // Create player using rtsp-relay's loadPlayer
+          this.cameraPlayer = window.loadPlayer({
+            url: wsUrl,
+            canvas: canvas
+          })
+
+          console.log('📹 [RTSP] Player initialized, waiting for stream...')
+
+          // Give it time to connect and start streaming
+          setTimeout(() => {
+            if (this.cameraPlayer && !this.cameraError) {
+              console.log('📹 [RTSP] Camera stream started')
+              this.cameraConnected = true
+              this.cameraConnecting = false
+            } else if (this.cameraConnecting) {
+              this.cameraError = 'Connection timeout - no video received'
+              this.cameraConnecting = false
+            }
+          }, 2000)
+        } else {
+          throw new Error('RTSP player not available')
+        }
+      } catch (error) {
+        console.error('📹 [RTSP] Connection error:', error)
+        this.cameraError = error.message || 'Failed to connect to camera'
+        this.cameraConnecting = false
+      }
+    },
+    loadRtspScript() {
+      return new Promise(async (resolve, reject) => {
+        if (window.loadPlayer) {
+          resolve()
+          return
+        }
+
+        try {
+          console.log('📹 [RTSP] Fetching script URL from backend...')
+          const response = await fetch('http://localhost:8080/camera/script')
+          if (!response.ok) {
+            throw new Error('Failed to get RTSP script URL')
+          }
+
+          const data = await response.json()
+          console.log('📹 [RTSP] Loading player script from:', data.scriptUrl)
+
+          const script = document.createElement('script')
+          script.src = data.scriptUrl
+
+          script.onload = () => {
+            console.log('📹 [RTSP] RTSP player script loaded successfully')
+            if (window.loadPlayer) {
+              resolve()
+            } else {
+              reject(new Error('loadPlayer not available after loading script'))
+            }
+          }
+
+          script.onerror = (err) => {
+            console.error('📹 [RTSP] Failed to load RTSP script:', err)
+            reject(new Error('Failed to load RTSP script'))
+          }
+
+          document.head.appendChild(script)
+        } catch (error) {
+          console.error('📹 [RTSP] Error loading script:', error)
+          reject(error)
+        }
+      })
+    },
     disconnectCamera() {
       if (this.cameraWs) {
         this.cameraWs.close()
         this.cameraWs = null
       }
+      if (this.cameraPlayer) {
+        // Clean up JSMpeg player
+        try {
+          if (typeof this.cameraPlayer.destroy === 'function') {
+            this.cameraPlayer.destroy()
+          } else if (typeof this.cameraPlayer.stop === 'function') {
+            this.cameraPlayer.stop()
+          }
+        } catch (err) {
+          console.warn('📹 Error destroying player:', err)
+        }
+        this.cameraPlayer = null
+      }
       this.cameraConnected = false
       this.cameraConnecting = false
+      this.cameraError = null
     },
     getNozzleTemp() {
       if (this.printer.status !== 'online' || !this.printerData) {

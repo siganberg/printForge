@@ -175,6 +175,7 @@ class CameraService {
     this.printerService = printerService;
     this.a1Sockets = new Map();
     this.rtspProxy = null;
+    this.scriptUrl = null;
   }
 
   initialize(app) {
@@ -184,10 +185,16 @@ class CameraService {
     try {
       const rtspRelay = require('rtsp-relay')(app);
       this.rtspProxy = rtspRelay.proxy;
+      this.scriptUrl = rtspRelay.scriptUrl;
       console.log('📹 RTSP relay initialized');
+      console.log('📹 RTSP script URL:', this.scriptUrl);
     } catch (error) {
       console.error('📹 Failed to initialize RTSP relay:', error);
     }
+  }
+
+  getScriptUrl() {
+    return this.scriptUrl;
   }
 
   getPrinterModel(printer) {
@@ -235,20 +242,40 @@ class CameraService {
     } else {
       // X1 Carbon and similar - use RTSP
       const cameraUrl = `rtsps://bblp:${printer.accessCode}@${printer.ipAddress}:322/streaming/live/1`;
-      console.log(`📹 Starting RTSP stream for ${printer.name}: ${cameraUrl}`);
+      console.log(`📹 [RTSP] Starting RTSP stream for ${printer.name}`);
+      console.log(`📹 [RTSP] Camera URL: rtsps://bblp:***@${printer.ipAddress}:322/streaming/live/1`);
 
       if (this.rtspProxy) {
-        const handler = this.rtspProxy({
-          url: cameraUrl,
-          verbose: true,
-          transport: 'tcp'
-        });
+        try {
+          // Add error handling for WebSocket before creating handler
+          ws.on('error', (error) => {
+            console.error(`📹 [RTSP] WebSocket error for ${printer.name}:`, error.message);
+          });
 
-        // Pass both ws and req for proper rtsp-relay handling
-        if (req) {
-          handler(ws, req);
-        } else {
-          handler(ws);
+          ws.on('close', (code, reason) => {
+            console.log(`📹 [RTSP] WebSocket closed for ${printer.name} (code: ${code}, reason: ${reason || 'none'})`);
+          });
+
+          const handler = this.rtspProxy({
+            url: cameraUrl,
+            verbose: true,
+            transport: 'tcp'
+          });
+
+          console.log(`📹 [RTSP] Proxy handler created for ${printer.name}`);
+
+          // Pass both ws and req for proper rtsp-relay handling
+          if (req) {
+            handler(ws, req);
+          } else {
+            handler(ws);
+          }
+
+          console.log(`📹 [RTSP] Handler initialized and connected for ${printer.name}`);
+        } catch (error) {
+          console.error(`📹 [RTSP] Error setting up stream for ${printer.name}:`, error);
+          console.error(`📹 [RTSP] Stack trace:`, error.stack);
+          ws.close(1011, 'Failed to initialize RTSP stream');
         }
       } else {
         console.error('📹 RTSP proxy not available');

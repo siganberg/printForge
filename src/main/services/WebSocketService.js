@@ -20,6 +20,13 @@ class WebSocketService {
     // Create Express app
     this.app = express();
 
+    // Enable CORS for localhost development
+    const cors = require('cors');
+    this.app.use(cors({
+      origin: 'http://localhost:5173',
+      credentials: true
+    }));
+
     // Enable WebSocket support
     const wsInstance = expressWs(this.app);
 
@@ -27,6 +34,20 @@ class WebSocketService {
     if (this.cameraService) {
       this.cameraService.initialize(this.app);
     }
+
+    // Camera script URL endpoint
+    this.app.get('/camera/script', (req, res) => {
+      if (this.cameraService) {
+        const scriptUrl = this.cameraService.getScriptUrl();
+        if (scriptUrl) {
+          res.json({ scriptUrl });
+        } else {
+          res.status(503).json({ error: 'RTSP relay not initialized' });
+        }
+      } else {
+        res.status(503).json({ error: 'Camera service not available' });
+      }
+    });
 
     // Camera stream endpoint
     this.app.ws('/camera/:printerId', (ws, req) => {

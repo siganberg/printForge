@@ -297,7 +297,6 @@ body {
   justify-content: center;
   color: var(--text-secondary);
   font-size: 1rem;
-  padding: 1rem;
   overflow: hidden;
 }
 
