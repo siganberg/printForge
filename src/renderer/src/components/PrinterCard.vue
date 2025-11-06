@@ -131,16 +131,16 @@ export default {
     },
     getLayersDisplay() {
       if (this.printer.status !== 'online' || !this.printerData) {
-        return '--/--'
+        return 'Progress: --/-- Layers'
       }
       const currentLayer = this.printerData.layerNum || 0
       const totalLayers = this.printerData.totalLayerNum || 0
 
       if (totalLayers === 0) {
-        return '--/--'
+        return 'Progress: --/-- Layers'
       }
 
-      return `${currentLayer}/${totalLayers}`
+      return `Progress: ${currentLayer}/${totalLayers} Layers`
     },
     getJobFilename() {
       if (!this.printerData) return ''
