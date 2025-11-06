@@ -32,6 +32,7 @@
       <div class="progress-section">
         <div class="progress-header">
           <span class="progress-label">Progress</span>
+          <span class="progress-layers">{{ getLayersDisplay() }}</span>
           <span class="progress-percentage">{{ getProgress() }}%</span>
         </div>
         <div class="progress-bar">
@@ -128,6 +129,19 @@ export default {
         return 0
       }
       return Math.round(this.printerData.progress || 0)
+    },
+    getLayersDisplay() {
+      if (this.printer.status !== 'online' || !this.printerData) {
+        return '--/--'
+      }
+      const currentLayer = this.printerData.layerNum || 0
+      const totalLayers = this.printerData.totalLayerNum || 0
+
+      if (totalLayers === 0) {
+        return '--/--'
+      }
+
+      return `${currentLayer}/${totalLayers}`
     },
     getJobFilename() {
       if (!this.printerData) return ''

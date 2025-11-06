@@ -349,6 +349,12 @@ body {
   font-size: 0.875rem;
 }
 
+.progress-layers {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
 .progress-percentage {
   color: var(--accent-color);
   font-weight: 600;
