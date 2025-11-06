@@ -75,7 +75,22 @@
         </button>
       </div>
       <div class="camera-content">
-        <!-- Camera content will go here -->
+        <div v-if="getCameraUrl()" class="camera-view">
+          <img
+            :src="getCameraUrl()"
+            alt="Printer Camera"
+            class="camera-image"
+            @error="handleImageError"
+          />
+          <div v-if="imageError" class="camera-error">
+            <p>Unable to load camera feed</p>
+            <p class="error-detail">{{ imageError }}</p>
+          </div>
+        </div>
+        <div v-else class="camera-placeholder">
+          <p>Camera not available</p>
+          <p class="camera-info">{{ getCameraInfo() }}</p>
+        </div>
       </div>
     </div>
   </div>
@@ -106,7 +121,8 @@ export default {
   },
   data() {
     return {
-      isFlipped: false
+      isFlipped: false,
+      imageError: null
     }
   },
   computed: {
@@ -120,6 +136,49 @@ export default {
   methods: {
     toggleFlip() {
       this.isFlipped = !this.isFlipped
+      this.imageError = null // Reset error when flipping
+    },
+    getCameraUrl() {
+      if (this.printer.status !== 'online' || !this.printerData) {
+        return null
+      }
+
+      const ipAddress = this.printer.ipAddress
+
+      // X1 Carbon and similar models with RTSP support
+      // Construct MJPEG stream URL or snapshot URL
+      if (this.printerData.rtspUrl) {
+        // For X1 Carbon, use the IP from rtspUrl or printer.ipAddress
+        // Bambu Lab cameras typically serve MJPEG on port 8080
+        return `http://${ipAddress}:8080/mjpeg`
+      }
+
+      // A1 and models without RTSP - try snapshot endpoint
+      if (this.printerData.ipcamDev === '1' || this.printerData.ipcamDev) {
+        // Try common Bambu Lab snapshot endpoints
+        return `http://${ipAddress}:8080/snapshot`
+      }
+
+      return null
+    },
+    getCameraInfo() {
+      if (this.printer.status !== 'online') {
+        return 'Printer is offline'
+      }
+
+      if (!this.printerData) {
+        return 'No printer data available'
+      }
+
+      if (this.printerData.rtspUrl) {
+        return `RTSP: ${this.printerData.rtspUrl}`
+      }
+
+      return 'No camera detected on this printer'
+    },
+    handleImageError(event) {
+      this.imageError = 'Camera feed unavailable. Check printer network settings.'
+      console.error('Camera image load error:', event)
     },
     getNozzleTemp() {
       if (this.printer.status !== 'online' || !this.printerData) {

@@ -447,6 +447,9 @@ class MqttService {
             subtaskName: parsed.print?.subtask_name || '',
             gcodeFile: parsed.print?.gcode_file || '',
             gcodeState: parsed.print?.gcode_state || '',
+            // Camera information
+            rtspUrl: parsed.print?.ipcam?.rtsp_url || '',
+            ipcamDev: parsed.print?.ipcam?.ipcam_dev || '',
             // AMS (filament) information
             ams: this.extractAmsData(parsed.print?.ams)
           };
