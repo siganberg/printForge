@@ -37,8 +37,10 @@
     "adm-zip": "^0.5.16",
     "basic-ftp": "^5.0.5",
     "better-queue": "^3.8.12",
+    "express-ws": "^5.0.2",
     "fast-xml-parser": "^5.3.1",
     "mqtt": "^5.3.4",
+    "rtsp-relay": "^1.9.0",
     "vue": "^3.3.4",
     "ws": "^8.14.2"
   },

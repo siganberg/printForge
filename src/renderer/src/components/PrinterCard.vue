@@ -75,21 +75,23 @@
         </button>
       </div>
       <div class="camera-content">
-        <div v-if="getCameraUrl()" class="camera-view">
-          <img
-            :src="getCameraUrl()"
-            alt="Printer Camera"
-            class="camera-image"
-            @error="handleImageError"
-          />
-          <div v-if="imageError" class="camera-error">
-            <p>Unable to load camera feed</p>
-            <p class="error-detail">{{ imageError }}</p>
+        <div class="camera-view">
+          <canvas ref="cameraCanvas" class="camera-canvas"></canvas>
+          <div v-if="!cameraConnected" class="camera-overlay">
+            <div v-if="cameraError" class="camera-message">
+              <p>Camera Error</p>
+              <p class="error-detail">{{ cameraError }}</p>
+              <button @click="connectCamera" class="retry-btn">Retry</button>
+            </div>
+            <div v-else-if="cameraConnecting" class="camera-message">
+              <div class="loading-spinner"></div>
+              <p>Connecting to camera...</p>
+            </div>
+            <div v-else class="camera-message">
+              <p>Camera not connected</p>
+              <button @click="connectCamera" class="connect-btn">Connect Camera</button>
+            </div>
           </div>
-        </div>
-        <div v-else class="camera-placeholder">
-          <p>Camera not available</p>
-          <p class="camera-info">{{ getCameraInfo() }}</p>
         </div>
       </div>
     </div>
@@ -122,7 +124,10 @@ export default {
   data() {
     return {
       isFlipped: false,
-      imageError: null
+      cameraWs: null,
+      cameraConnected: false,
+      cameraConnecting: false,
+      cameraError: null
     }
   },
   computed: {
@@ -136,49 +141,88 @@ export default {
   methods: {
     toggleFlip() {
       this.isFlipped = !this.isFlipped
-      this.imageError = null // Reset error when flipping
+      if (!this.isFlipped) {
+        // Disconnecting camera when flipping back
+        this.disconnectCamera()
+      }
     },
-    getCameraUrl() {
-      if (this.printer.status !== 'online' || !this.printerData) {
-        return null
-      }
+    connectCamera() {
+      if (this.cameraConnecting || this.cameraConnected) return
 
-      const ipAddress = this.printer.ipAddress
-
-      // X1 Carbon and similar models with RTSP support
-      // Construct MJPEG stream URL or snapshot URL
-      if (this.printerData.rtspUrl) {
-        // For X1 Carbon, use the IP from rtspUrl or printer.ipAddress
-        // Bambu Lab cameras typically serve MJPEG on port 8080
-        return `http://${ipAddress}:8080/mjpeg`
-      }
-
-      // A1 and models without RTSP - try snapshot endpoint
-      if (this.printerData.ipcamDev === '1' || this.printerData.ipcamDev) {
-        // Try common Bambu Lab snapshot endpoints
-        return `http://${ipAddress}:8080/snapshot`
-      }
-
-      return null
-    },
-    getCameraInfo() {
       if (this.printer.status !== 'online') {
-        return 'Printer is offline'
+        this.cameraError = 'Printer is offline'
+        return
       }
 
-      if (!this.printerData) {
-        return 'No printer data available'
+      this.cameraConnecting = true
+      this.cameraError = null
+
+      // Connect to camera WebSocket
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const wsUrl = `${wsProtocol}//localhost:8080/camera/${this.printer.id}`
+
+      console.log(`📹 Connecting to camera: ${wsUrl}`)
+
+      this.cameraWs = new WebSocket(wsUrl)
+      this.cameraWs.binaryType = 'arraybuffer'
+
+      const canvas = this.$refs.cameraCanvas
+      if (!canvas) {
+        this.cameraError = 'Canvas not available'
+        this.cameraConnecting = false
+        return
       }
 
-      if (this.printerData.rtspUrl) {
-        return `RTSP: ${this.printerData.rtspUrl}`
+      const ctx = canvas.getContext('2d')
+
+      this.cameraWs.onopen = () => {
+        console.log('📹 Camera WebSocket connected')
+        this.cameraConnected = true
+        this.cameraConnecting = false
       }
 
-      return 'No camera detected on this printer'
+      this.cameraWs.onmessage = (event) => {
+        if (event.data instanceof ArrayBuffer) {
+          const blob = new Blob([event.data], { type: 'image/jpeg' })
+          const url = URL.createObjectURL(blob)
+
+          const img = new Image()
+          img.onload = () => {
+            if (canvas && ctx) {
+              canvas.width = img.width
+              canvas.height = img.height
+              ctx.drawImage(img, 0, 0)
+            }
+            URL.revokeObjectURL(url)
+          }
+          img.onerror = () => {
+            URL.revokeObjectURL(url)
+          }
+          img.src = url
+        }
+      }
+
+      this.cameraWs.onerror = (err) => {
+        console.error('📹 Camera WebSocket error:', err)
+        this.cameraError = 'Camera connection failed'
+        this.cameraConnecting = false
+      }
+
+      this.cameraWs.onclose = () => {
+        console.log('📹 Camera WebSocket closed')
+        this.cameraConnected = false
+        if (!this.cameraError) {
+          this.cameraError = 'Camera connection closed'
+        }
+      }
     },
-    handleImageError(event) {
-      this.imageError = 'Camera feed unavailable. Check printer network settings.'
-      console.error('Camera image load error:', event)
+    disconnectCamera() {
+      if (this.cameraWs) {
+        this.cameraWs.close()
+        this.cameraWs = null
+      }
+      this.cameraConnected = false
+      this.cameraConnecting = false
     },
     getNozzleTemp() {
       if (this.printer.status !== 'online' || !this.printerData) {
@@ -313,6 +357,10 @@ export default {
       // Emit event to parent to show confirmation dialog
       this.$emit('request-stop-print', this.printer)
     }
+  },
+  beforeUnmount() {
+    // Clean up camera connection
+    this.disconnectCamera()
   }
 }
 </script>

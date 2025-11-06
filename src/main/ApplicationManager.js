@@ -7,6 +7,7 @@ const MqttService = require('./services/MqttService');
 const FtpService = require('./services/FtpService');
 const SlicingService = require('./services/SlicingService');
 const PresetsService = require('./services/PresetsService');
+const CameraService = require('./services/CameraService');
 
 class ApplicationManager {
   constructor() {
@@ -16,11 +17,12 @@ class ApplicationManager {
     this.presetsService = new PresetsService();
     this.printerService = new PrinterService(this.mqttService);
     this.settingsService = new SettingsService();
-    
+    this.cameraService = new CameraService(this.printerService);
+
     // Initialize SlicingService with PrinterService and FtpService dependencies
     this.slicingService = new SlicingService(this.printerService, this.ftpService);
 
-    this.webSocketService = new WebSocketService(this.printerService, this.settingsService, this.ftpService, this.slicingService, this.presetsService, this.mqttService);
+    this.webSocketService = new WebSocketService(this.printerService, this.settingsService, this.ftpService, this.slicingService, this.presetsService, this.mqttService, this.cameraService);
   }
 
   async initialize() {

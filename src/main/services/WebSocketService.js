@@ -1,21 +1,39 @@
 const WebSocket = require('ws');
 
 class WebSocketService {
-  constructor(printerService, settingsService, ftpService, slicingService, presetsService, mqttService) {
+  constructor(printerService, settingsService, ftpService, slicingService, presetsService, mqttService, cameraService) {
     this.printerService = printerService;
     this.settingsService = settingsService;
     this.ftpService = ftpService;
     this.slicingService = slicingService;
     this.presetsService = presetsService;
     this.mqttService = mqttService;
+    this.cameraService = cameraService;
     this.wss = null;
     this.port = 8080;
   }
 
   initialize() {
     this.wss = new WebSocket.Server({ port: this.port });
-    
-    this.wss.on('connection', (ws) => {
+
+    this.wss.on('connection', (ws, req) => {
+      const url = req.url || '';
+
+      // Check if this is a camera stream request
+      if (url.startsWith('/camera/')) {
+        const printerId = url.split('/').pop();
+        console.log(`📹 Camera stream requested for printer: ${printerId}`);
+
+        if (this.cameraService) {
+          this.cameraService.handleCameraStream(ws, printerId);
+        } else {
+          console.error('📹 Camera service not available');
+          ws.close(1011, 'Camera service not available');
+        }
+        return;
+      }
+
+      // Regular WebSocket connection for app data
       console.log('Client connected to WebSocket');
 
       ws.on('message', (message) => {
@@ -35,6 +53,11 @@ class WebSocketService {
         console.error('WebSocket client error:', error);
       });
     });
+
+    // Initialize camera service with rtsp-relay
+    if (this.cameraService) {
+      this.cameraService.initialize(this.wss);
+    }
 
     console.log(`WebSocket server started on port ${this.port}`);
   }
