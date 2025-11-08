@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="152" height="152" viewBox="0 0 152 152" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="152" height="152" fill="#2563eb"/>
+
+  <!-- Icon background circle -->
+  <circle cx="76" cy="76" r="60.800000000000004" fill="#1e40af" opacity="0.3"/>
+
+  <!-- Text -->
+  <text
+    x="50%"
+    y="50%"
+    font-family="Arial, sans-serif"
+    font-size="60.800000000000004"
+    font-weight="bold"
+    fill="white"
+    text-anchor="middle"
+    dominant-baseline="central">
+    PF
+  </text>
+</svg>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1536" height="2048" viewBox="0 0 1536 2048" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1536" height="2048" fill="#1a1a1a"/>
+
+  <!-- Centered icon -->
+  <g transform="translate(576, 832)">
+    <!-- Icon background circle -->
+    <circle cx="192" cy="192" r="172.8" fill="#2563eb"/>
+    <circle cx="192" cy="192" r="134.39999999999998" fill="#1e40af" opacity="0.3"/>
+
+    <!-- Text -->
+    <text
+      x="192"
+      y="192"
+      font-family="Arial, sans-serif"
+      font-size="134.39999999999998"
+      font-weight="bold"
+      fill="white"
+      text-anchor="middle"
+      dominant-baseline="central">
+      PF
+    </text>
+  </g>
+
+  <!-- App name -->
+  <text
+    x="50%"
+    y="1536"
+    font-family="Arial, sans-serif"
+    font-size="76.80000000000001"
+    font-weight="normal"
+    fill="#9ca3af"
+    text-anchor="middle">
+    PrintForge
+  </text>
+</svg>

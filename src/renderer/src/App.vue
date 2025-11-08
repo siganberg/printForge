@@ -258,10 +258,27 @@ export default {
             this.printerData[printerId] = {}
           }
 
+          // Check for print completion notification
+          const oldState = this.printerData[printerId].gcodeState
+          const newState = changes.gcodeState
+
           // Apply only the changed fields
           this.printerData[printerId] = {
             ...this.printerData[printerId],
             ...changes
+          }
+
+          // Send notification when print completes
+          if (oldState && oldState !== 'FINISH' && newState === 'FINISH') {
+            const printer = this.printers.find(p => p.id === printerId)
+            if (printer) {
+              this.showNotification('Print Complete! 🎉', {
+                body: `${printer.name} has finished printing`,
+                tag: `print-complete-${printerId}`,
+                requireInteraction: true,
+                vibrate: [200, 100, 200]
+              })
+            }
           }
           break
         case 'filament-preference-saved':
@@ -338,10 +355,62 @@ export default {
     handleConfirmNo() {
       this.showConfirmDialog = false
       this.confirmDialogCallback = null
+    },
+    async registerServiceWorker() {
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.register('/sw.js', {
+            scope: '/'
+          })
+          console.log('Service Worker registered:', registration.scope)
+
+          // Check for updates
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing
+            console.log('Service Worker update found')
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('New Service Worker available, reloading...')
+                // Auto-reload to get new version
+                window.location.reload()
+              }
+            })
+          })
+
+          // Request notification permission
+          this.requestNotificationPermission()
+        } catch (error) {
+          console.error('Service Worker registration failed:', error)
+        }
+      }
+    },
+    async requestNotificationPermission() {
+      if ('Notification' in window && 'serviceWorker' in navigator) {
+        const permission = await Notification.requestPermission()
+        console.log('Notification permission:', permission)
+
+        if (permission === 'granted') {
+          console.log('Notifications enabled')
+        }
+      }
+    },
+    showNotification(title, options = {}) {
+      if ('serviceWorker' in navigator && 'Notification' in window) {
+        if (Notification.permission === 'granted') {
+          navigator.serviceWorker.ready.then((registration) => {
+            registration.showNotification(title, {
+              icon: '/icons/icon-192x192.svg',
+              badge: '/icons/icon-72x72.svg',
+              ...options
+            })
+          })
+        }
+      }
     }
   },
   mounted() {
     this.connectWebSocket()
+    this.registerServiceWorker()
   },
   beforeUnmount() {
     if (this.ws) {

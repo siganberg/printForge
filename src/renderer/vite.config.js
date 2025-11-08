@@ -17,8 +17,12 @@ export default defineConfig({
     }
   ],
   root: path.resolve(__dirname),
+  publicDir: 'public',
   build: {
-    outDir: 'dist'
+    outDir: 'dist',
+    assetsDir: 'assets',
+    // Copy public folder contents to dist root
+    copyPublicDir: true
   },
   server: {
     port: 5173,
