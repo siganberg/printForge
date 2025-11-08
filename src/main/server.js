@@ -1,5 +1,4 @@
-const { BrowserWindow } = require('electron');
-const path = require('path');
+// Production server (without Electron)
 const PrinterService = require('./services/PrinterService');
 const SettingsService = require('./services/SettingsService');
 const WebSocketService = require('./services/WebSocketService');
@@ -9,25 +8,29 @@ const SlicingService = require('./services/SlicingService');
 const PresetsService = require('./services/PresetsService');
 const CameraService = require('./services/CameraService');
 
-class ApplicationManager {
+class ProductionServer {
   constructor() {
-    this.mainWindow = null;
     this.mqttService = new MqttService();
     this.ftpService = new FtpService();
     this.presetsService = new PresetsService();
     this.printerService = new PrinterService(this.mqttService);
     this.settingsService = new SettingsService();
     this.cameraService = new CameraService(this.printerService);
-
-    // Initialize SlicingService with PrinterService and FtpService dependencies
     this.slicingService = new SlicingService(this.printerService, this.ftpService);
-
-    this.webSocketService = new WebSocketService(this.printerService, this.settingsService, this.ftpService, this.slicingService, this.presetsService, this.mqttService, this.cameraService);
+    this.webSocketService = new WebSocketService(
+      this.printerService,
+      this.settingsService,
+      this.ftpService,
+      this.slicingService,
+      this.presetsService,
+      this.mqttService,
+      this.cameraService
+    );
   }
 
   async initialize() {
-    console.log('Initializing Application Manager...');
-    
+    console.log('🚀 Starting PrintForge Production Server...');
+
     // Initialize services
     this.settingsService.initialize();
     this.mqttService.initialize();
@@ -52,49 +55,11 @@ class ApplicationManager {
       }
     });
 
-    // Create main window (unless running headless)
-    if (process.env.HEADLESS !== 'true') {
-      this.createWindow();
-    } else {
-      console.log('Running in headless mode (no UI window)');
-    }
-
-    console.log('Application Manager initialized successfully');
-  }
-
-  createWindow() {
-    this.mainWindow = new BrowserWindow({
-      width: 1200,
-      height: 800,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true
-      }
-    });
-
-    const isDev = process.env.NODE_ENV === 'development';
-    const wsPort = process.env.WS_PORT || 8888;
-
-    if (isDev) {
-      // Development: Load from Vite dev server
-      this.mainWindow.loadURL('http://localhost:5173');
-      this.mainWindow.webContents.openDevTools();
-    } else {
-      // Production: Load from Express server on port 8888
-      this.mainWindow.loadURL(`http://localhost:${wsPort}`);
-    }
-
-    this.mainWindow.on('closed', () => {
-      this.mainWindow = null;
-    });
-  }
-
-  getMainWindow() {
-    return this.mainWindow;
+    console.log('✅ PrintForge server initialized successfully');
   }
 
   shutdown() {
-    console.log('Shutting down Application Manager...');
+    console.log('🛑 Shutting down PrintForge server...');
     this.webSocketService.close();
     this.mqttService.shutdown();
     this.ftpService.shutdown();
@@ -102,4 +67,21 @@ class ApplicationManager {
   }
 }
 
-module.exports = ApplicationManager;
+// Start the server
+const server = new ProductionServer();
+
+server.initialize().catch((error) => {
+  console.error('❌ Failed to start server:', error);
+  process.exit(1);
+});
+
+// Handle graceful shutdown
+process.on('SIGINT', () => {
+  server.shutdown();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  server.shutdown();
+  process.exit(0);
+});

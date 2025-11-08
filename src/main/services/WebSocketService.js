@@ -13,19 +13,28 @@ class WebSocketService {
     this.app = null;
     this.server = null;
     this.wsClients = new Set();
-    this.port = 8080;
+    this.port = process.env.WS_PORT || 8888;
   }
 
   initialize() {
     // Create Express app
     this.app = express();
 
-    // Enable CORS for localhost development
+    // Enable CORS for all origins (development and Cloudflare tunnel)
     const cors = require('cors');
     this.app.use(cors({
-      origin: 'http://localhost:5173',
+      origin: (origin, callback) => {
+        // Allow all origins (localhost, network access, and Cloudflare tunnel)
+        callback(null, true);
+      },
       credentials: true
     }));
+
+    // Serve static files from Vue build (for production/Cloudflare)
+    const path = require('path');
+    this.distPath = path.join(__dirname, '../../renderer/dist');
+    this.app.use(express.static(this.distPath));
+    console.log('📦 Serving static files from:', this.distPath);
 
     // Enable WebSocket support
     const wsInstance = expressWs(this.app);
@@ -86,9 +95,20 @@ class WebSocketService {
       });
     });
 
-    // Start Express server
-    this.server = this.app.listen(this.port, () => {
-      console.log(`WebSocket server started on port ${this.port}`);
+    // Fallback to index.html for SPA client-side routing (catch-all middleware)
+    this.app.use((req, res, next) => {
+      // Don't serve index.html for WebSocket routes or API routes
+      if (req.path.startsWith('/camera') || req.path.startsWith('/api') || req.path === '/') {
+        return next();
+      }
+      // For all other routes, serve index.html (SPA routing)
+      res.sendFile(path.join(this.distPath, 'index.html'));
+    });
+
+    // Start Express server on all network interfaces
+    this.server = this.app.listen(this.port, '0.0.0.0', () => {
+      console.log(`WebSocket server started on port ${this.port} (accessible from network)`);
+      console.log(`Frontend available at: http://localhost:${this.port}`);
     });
   }
 

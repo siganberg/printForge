@@ -11,6 +11,8 @@
     "dev:electron": "cross-env NODE_ENV=development electron .",
     "dev:electron:watch": "cross-env NODE_ENV=development nodemon --watch src/main --ext js,json --exec \"electron .\"",
     "dev:vue": "vite --config src/renderer/vite.config.js --host",
+    "start": "npm run build:vue && cross-env NODE_ENV=production electron .",
+    "start:headless": "npm run build:vue && cross-env NODE_ENV=production node src/main/server.js",
     "build": "npm run build:vue && npm run build:electron",
     "build:vue": "vite build --config src/renderer/vite.config.js",
     "build:electron": "electron-builder",

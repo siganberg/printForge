@@ -41,7 +41,7 @@
           <span class="progress-percentage">{{ getProgress() }}%</span>
         </div>
         <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: getProgress() + '%' }"></div>
+          <div class="progress-fill" :class="{ 'progress-active': isPrinting }" :style="{ width: getProgress() + '%' }"></div>
         </div>
         <div class="progress-footer">
           <span class="job-info" v-if="getJobFilename()">
@@ -175,8 +175,15 @@ export default {
                         this.printer.serialNo?.toLowerCase().startsWith('039')
 
       // Connect to camera WebSocket
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const wsUrl = `${wsProtocol}//localhost:8080/camera/${this.printer.id}`
+      const isSecure = window.location.protocol === 'https:'
+      const wsProtocol = isSecure ? 'wss:' : 'ws:'
+      const wsHost = window.location.hostname
+
+      // For Cloudflare tunnel (https), use same host without port
+      // For local development (http), use host:8888
+      const wsUrl = isSecure
+        ? `${wsProtocol}//${wsHost}/camera/${this.printer.id}`
+        : `${wsProtocol}//${wsHost}:8888/camera/${this.printer.id}`
 
       console.log(`📹 Connecting to camera (${isA1Model ? 'A1' : 'X1'}): ${wsUrl}`)
 
@@ -283,7 +290,17 @@ export default {
 
         try {
           console.log('📹 [RTSP] Fetching script URL from backend...')
-          const response = await fetch('http://localhost:8080/camera/script')
+          const isSecure = window.location.protocol === 'https:'
+          const protocol = window.location.protocol
+          const host = window.location.hostname
+
+          // For Cloudflare tunnel (https), use same host without port
+          // For local development (http), use host:8888
+          const scriptUrl = isSecure
+            ? `${protocol}//${host}/camera/script`
+            : `${protocol}//${host}:8888/camera/script`
+
+          const response = await fetch(scriptUrl)
           if (!response.ok) {
             throw new Error('Failed to get RTSP script URL')
           }
@@ -379,11 +396,23 @@ export default {
       if (this.printer.status !== 'online' || !this.printerData) {
         return 'Layers: --/--'
       }
+
+      const gcodeState = this.printerData.gcodeState
       const currentLayer = this.printerData.layerNum || 0
       const totalLayers = this.printerData.totalLayerNum || 0
 
       if (totalLayers === 0) {
         return 'Layers: --/--'
+      }
+
+      // When print is finished, show totalLayers/totalLayers
+      if (gcodeState === 'FINISH' && totalLayers > 0) {
+        return `Layers: ${totalLayers}/${totalLayers}`
+      }
+
+      // When not running, show 0/0
+      if (!this.isPrinting && gcodeState !== 'FINISH') {
+        return 'Layers: 0/0'
       }
 
       return `Layers: ${currentLayer}/${totalLayers}`

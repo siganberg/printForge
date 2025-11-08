@@ -180,7 +180,19 @@ export default {
       return sanitized
     },
     connectWebSocket() {
-      this.ws = new WebSocket('ws://localhost:8080')
+      // Use current hostname for WebSocket connection
+      const isSecure = window.location.protocol === 'https:'
+      const wsProtocol = isSecure ? 'wss:' : 'ws:'
+      const wsHost = window.location.hostname
+
+      // For Cloudflare tunnel (https), use same host without port
+      // For local development (http), use host:8888
+      const wsUrl = isSecure
+        ? `${wsProtocol}//${wsHost}`
+        : `${wsProtocol}//${wsHost}:8888`
+
+      console.log('Connecting to WebSocket:', wsUrl)
+      this.ws = new WebSocket(wsUrl)
 
       this.ws.onopen = () => {
         this.loadSettings()

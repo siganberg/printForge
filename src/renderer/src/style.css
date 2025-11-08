@@ -549,6 +549,9 @@ body {
     rgba(255, 255, 255, 0.1) 10px,
     rgba(255, 255, 255, 0.1) 20px
   );
+}
+
+.progress-fill.progress-active::before {
   animation: progress-stripes 1s linear infinite;
 }
 
@@ -978,6 +981,47 @@ body {
   /* Sizing inherited from .modal-container */
 }
 
+/* Two-column layout for plate and filament selection */
+.two-column-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  min-height: 400px;
+}
+
+.plates-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border-right: 1px solid var(--border-color);
+  padding-right: 2rem;
+}
+
+.filament-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-left: 2rem;
+}
+
+.plates-column h3, .filament-column h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.plates-grid, .filament-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow-y: auto;
+  max-height: 500px;
+  padding-right: 0.5rem;
+}
+
 .file-list-container {
   min-height: 400px;
   max-height: 400px;
@@ -1088,4 +1132,167 @@ body {
   padding: 1.5rem 2rem;
   border-top: 1px solid var(--border-color);
   background-color: var(--bg-secondary);
+}
+
+/* ============================================
+   Mobile Responsive Styles
+   ============================================ */
+
+/* Tablet and smaller */
+@media (max-width: 768px) {
+  .printers-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    padding: 0;
+  }
+
+  .main-content {
+    padding: 1rem;
+  }
+
+  .header {
+    padding: 1rem;
+  }
+
+  .printer-card {
+    min-width: unset;
+  }
+
+  /* Stack plate and filament selection vertically on tablets */
+  .two-column-layout {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+  }
+
+  .modal-container {
+    width: 90vw !important;
+    max-width: 90vw !important;
+  }
+
+  /* Remove vertical separator on tablets */
+  .plates-column {
+    border-right: none !important;
+    padding-right: 0 !important;
+  }
+
+  .filament-column {
+    padding-left: 0 !important;
+  }
+
+  /* Remove individual scrollbars, use single modal scroll */
+  .plates-grid, .filament-grid {
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
+}
+
+/* Mobile phones */
+@media (max-width: 480px) {
+  .printers-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .main-content {
+    padding: 0.5rem;
+  }
+
+  .header {
+    padding: 0.75rem 1rem;
+    flex-wrap: wrap;
+  }
+
+  .header h1 {
+    font-size: 1.25rem;
+  }
+
+  .printer-card {
+    padding: 1rem;
+  }
+
+  .printer-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .printer-name {
+    font-size: 1rem;
+  }
+
+  .printer-ip {
+    font-size: 0.75rem;
+  }
+
+  .temperature-cards {
+    gap: 0.75rem;
+  }
+
+  .temp-card {
+    padding: 0.75rem;
+  }
+
+  .temp-current {
+    font-size: 1.25rem;
+  }
+
+  .modal-content {
+    width: 95%;
+    max-width: 95%;
+    margin: 1rem;
+  }
+
+  .modal-container {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    margin: 0.5rem !important;
+  }
+
+  .modal-body {
+    padding: 1rem;
+  }
+
+  .form-group label {
+    font-size: 0.875rem;
+  }
+
+  .btn {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+  }
+
+  /* Two-column layout becomes single column on mobile */
+  .two-column-layout {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+    min-height: unset !important;
+  }
+
+  .plates-column, .filament-column {
+    width: 100%;
+  }
+
+  /* Remove vertical separator on mobile */
+  .plates-column {
+    border-right: none !important;
+    padding-right: 0 !important;
+  }
+
+  .filament-column {
+    padding-left: 0 !important;
+  }
+
+  /* Remove individual scrollbars, use single modal scroll */
+  .plates-grid, .filament-grid {
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
+
+  .plates-column h3, .filament-column h3 {
+    font-size: 0.875rem;
+  }
+
+  .plate-card, .filament-card {
+    width: 100%;
+  }
 }
