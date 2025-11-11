@@ -48,7 +48,7 @@ class FtpService {
             console.error(`❌ FTP upload task failed: ${taskId}`, error);
             callbacks.reject(error);
           } else {
-            console.log(`✅ FTP upload task completed: ${taskId}`);
+            // Silently resolve - success is logged in uploadSlicedFile
             callbacks.resolve(result);
           }
         }
