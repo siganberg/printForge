@@ -141,18 +141,16 @@ export default {
   },
   methods: {
     toggleFlip() {
-      this.isFlipped = !this.isFlipped
       if (this.isFlipped) {
-        // Auto-connect camera when flipping to camera view
+        // Closing camera view - disconnect immediately and hide canvas
+        this.disconnectCamera()
+        this.isFlipped = false
+      } else {
+        // Opening camera view
+        this.isFlipped = true
         this.$nextTick(() => {
           this.connectCamera()
         })
-      } else {
-        // Disconnect camera after flip animation completes (650ms = 600ms animation + 50ms buffer)
-        // This prevents the overlay from showing during animation
-        setTimeout(() => {
-          this.disconnectCamera()
-        }, 650)
       }
     },
     async connectCamera() {

@@ -201,18 +201,21 @@ body {
   bottom: 0;
   z-index: 1;
   visibility: hidden;
+  display: none;
 }
 
 .printer-card-container.is-flipped .printer-card-front {
   transform: rotateY(180deg);
   z-index: 1;
   visibility: hidden;
+  display: none;
 }
 
 .printer-card-container.is-flipped .printer-card-back {
   transform: rotateY(360deg);
   z-index: 2;
   visibility: visible;
+  display: flex;
 }
 
 .printer-card-front:hover:not(.printer-disabled) {
