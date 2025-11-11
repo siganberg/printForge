@@ -45,6 +45,13 @@
                   <span class="file-date">{{ formatDate(file.date) }}</span>
                 </div>
               </div>
+              <button
+                class="delete-file-btn"
+                @click.stop="confirmDeleteFile(file.name)"
+                title="Delete file"
+              >
+                🗑️
+              </button>
             </div>
           </div>
         </div>
@@ -153,12 +160,25 @@
         </button>
       </div>
     </div>
+
+    <!-- Confirm Dialog -->
+    <ConfirmDialog
+      :isVisible="showConfirmDialog"
+      :message="confirmDialogMessage"
+      @confirm="handleConfirmYes"
+      @cancel="handleConfirmNo"
+    />
   </div>
 </template>
 
 <script>
+import ConfirmDialog from './ConfirmDialog.vue'
+
 export default {
   name: 'PrintDialog',
+  components: {
+    ConfirmDialog
+  },
   props: {
     isVisible: {
       type: Boolean,
@@ -198,7 +218,10 @@ export default {
       plateError: null,
       selectedPlateIndex: 0,
       printing: false,
-      selectedFilamentIndex: 0
+      selectedFilamentIndex: 0,
+      showConfirmDialog: false,
+      confirmDialogMessage: '',
+      fileToDelete: null
     }
   },
   computed: {
@@ -624,6 +647,47 @@ export default {
         return `${hours}h ${minutes}m`
       }
       return `${minutes}m`
+    },
+
+    confirmDeleteFile(fileName) {
+      this.fileToDelete = fileName
+      this.confirmDialogMessage = `Are you sure you want to delete "${fileName}"? This action cannot be undone.`
+      this.showConfirmDialog = true
+    },
+
+    async handleConfirmYes() {
+      this.showConfirmDialog = false
+      if (this.fileToDelete) {
+        await this.deleteFile(this.fileToDelete)
+        this.fileToDelete = null
+      }
+    },
+
+    handleConfirmNo() {
+      this.showConfirmDialog = false
+      this.fileToDelete = null
+    },
+
+    async deleteFile(fileName) {
+      try {
+        const app = this.$parent.$parent || this.$root
+        if (app.sendMessage) {
+          app.sendMessage('delete-printer-file', {
+            printerId: this.printerId,
+            fileName: fileName
+          })
+
+          await this.waitForWebSocketResponse('file-deleted')
+
+          // Remove file from local list
+          this.files = this.files.filter(f => f.name !== fileName)
+        } else {
+          throw new Error('WebSocket connection not available')
+        }
+      } catch (error) {
+        console.error('Failed to delete file:', error)
+        this.error = error.message || 'Failed to delete file'
+      }
     }
   }
 }
@@ -879,5 +943,32 @@ export default {
 .print-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.delete-file-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.25rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: all 0.2s;
+  opacity: 0.6;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-file-btn:hover {
+  opacity: 1;
+  background-color: rgba(220, 53, 69, 0.1);
+  transform: scale(1.1);
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  position: relative;
 }
 </style>

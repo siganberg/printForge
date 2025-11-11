@@ -373,6 +373,59 @@ class FtpService {
     }
   }
 
+  async deleteFile(printer, fileName) {
+    if (!printer.ipAddress || !printer.accessCode) {
+      throw new Error('Printer IP address and access code are required');
+    }
+
+    const client = new Client();
+    const connectionKey = `${printer.id}-delete-${Date.now()}`;
+    this.connections.set(connectionKey, client);
+
+    try {
+      client.ftp.timeout = 30000; // 30 second timeout
+
+      console.log(`🗑️ [FTP] Starting delete: ${fileName} from ${printer.name} (${printer.ipAddress}:990)`);
+
+      await client.access({
+        host: printer.ipAddress,
+        port: 990, // FTPS port
+        user: 'bblp', // Bambu Lab user
+        password: printer.accessCode,
+        secure: 'implicit', // Use implicit FTPS
+        secureOptions: {
+          rejectUnauthorized: false,
+          requestCert: false,
+        }
+      });
+
+      console.log(`🔗 [FTP] Connected to ${printer.name} for delete`);
+
+      // Delete the file
+      const remotePath = `/${fileName}`;
+      await client.remove(remotePath);
+
+      console.log(`✅ [FTP] Delete COMPLETED: ${fileName} from ${printer.name} (${printer.ipAddress}) - SUCCESS`);
+
+      return {
+        success: true,
+        printer: printer.name,
+        fileName: fileName
+      };
+
+    } catch (error) {
+      console.error(`❌ [FTP] Delete FAILED: ${fileName} from ${printer.name} (${printer.ipAddress}) - ${error.message}`);
+      throw new Error(`Failed to delete from ${printer.name}: ${error.message}`);
+    } finally {
+      try {
+        await client.close();
+      } catch (closeError) {
+        console.warn(`⚠️ [FTP] Warning: Error closing connection to ${printer.name}:`, closeError.message);
+      }
+      this.connections.delete(connectionKey);
+    }
+  }
+
   shutdown() {
     console.log('Shutting down FTPS Service...');
 

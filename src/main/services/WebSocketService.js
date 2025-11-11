@@ -174,6 +174,10 @@ class WebSocketService {
         this.handleGetPrinterFiles(ws, data.payload.printerId);
         break;
 
+      case 'delete-printer-file':
+        this.handleDeletePrinterFile(ws, data.payload);
+        break;
+
       case 'start-print':
         this.handleStartPrint(ws, data.payload);
         break;
@@ -251,9 +255,28 @@ class WebSocketService {
       this.sendResponse(ws, 'printer-files', result);
     } catch (error) {
       console.error('Error getting printer files:', error);
-      this.sendResponse(ws, 'error', { 
+      this.sendResponse(ws, 'error', {
         message: 'Failed to get printer files',
-        details: error.message 
+        details: error.message
+      });
+    }
+  }
+
+  async handleDeletePrinterFile(ws, { printerId, fileName }) {
+    try {
+      const printer = this.printerService.getPrinter(printerId);
+      if (!printer) {
+        this.sendResponse(ws, 'error', { message: 'Printer not found' });
+        return;
+      }
+
+      await this.ftpService.deleteFile(printer, fileName);
+      this.sendResponse(ws, 'file-deleted', { fileName });
+    } catch (error) {
+      console.error('Error deleting printer file:', error);
+      this.sendResponse(ws, 'error', {
+        message: 'Failed to delete file',
+        details: error.message
       });
     }
   }
