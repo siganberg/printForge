@@ -334,17 +334,34 @@ export default {
       })
     },
     disconnectCamera() {
+      console.log('📹 Disconnecting camera...')
+
+      // Close A1-style WebSocket
       if (this.cameraWs) {
+        console.log('📹 Closing A1 WebSocket connection')
         this.cameraWs.close()
         this.cameraWs = null
       }
+
+      // Clean up RTSP player (JSMpeg)
       if (this.cameraPlayer) {
-        // Clean up JSMpeg player
+        console.log('📹 Cleaning up RTSP player:', this.cameraPlayer)
         try {
+          // Try to close the WebSocket connection directly (JSMpeg stores it here)
+          if (this.cameraPlayer.client && this.cameraPlayer.client.connection) {
+            console.log('📹 Closing RTSP WebSocket via player.client.connection')
+            this.cameraPlayer.client.connection.close()
+          }
+
+          // Try all possible cleanup methods
           if (typeof this.cameraPlayer.destroy === 'function') {
+            console.log('📹 Calling player.destroy()')
             this.cameraPlayer.destroy()
           } else if (typeof this.cameraPlayer.stop === 'function') {
+            console.log('📹 Calling player.stop()')
             this.cameraPlayer.stop()
+          } else {
+            console.warn('📹 No destroy or stop method found on player')
           }
         } catch (err) {
           console.warn('📹 Error destroying player:', err)
@@ -364,6 +381,7 @@ export default {
       this.cameraConnected = false
       this.cameraConnecting = false
       this.cameraError = null
+      console.log('📹 Camera disconnected')
     },
     getNozzleTemp() {
       if (this.printer.status !== 'online' || !this.printerData) {
