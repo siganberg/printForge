@@ -148,8 +148,11 @@ export default {
           this.connectCamera()
         })
       } else {
-        // Disconnect camera when flipping back
-        this.disconnectCamera()
+        // Disconnect camera after flip animation completes (600ms)
+        // This prevents the overlay from showing during animation
+        setTimeout(() => {
+          this.disconnectCamera()
+        }, 600)
       }
     },
     async connectCamera() {
@@ -350,6 +353,16 @@ export default {
         }
         this.cameraPlayer = null
       }
+
+      // Clear canvas to remove lingering image
+      const canvas = this.$refs.cameraCanvas
+      if (canvas) {
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height)
+        }
+      }
+
       this.cameraConnected = false
       this.cameraConnecting = false
       this.cameraError = null
