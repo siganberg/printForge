@@ -148,11 +148,11 @@ export default {
           this.connectCamera()
         })
       } else {
-        // Disconnect camera after flip animation completes (600ms)
+        // Disconnect camera after flip animation completes (650ms = 600ms animation + 50ms buffer)
         // This prevents the overlay from showing during animation
         setTimeout(() => {
           this.disconnectCamera()
-        }, 600)
+        }, 650)
       }
     },
     async connectCamera() {
