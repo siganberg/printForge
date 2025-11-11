@@ -177,15 +177,19 @@ body {
   box-shadow: var(--shadow);
   transition: transform 0.6s;
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
   min-height: 320px;
   display: flex;
   flex-direction: column;
   backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   position: relative;
+  will-change: transform;
 }
 
 .printer-card-front {
   transform: rotateY(0deg);
+  z-index: 2;
 }
 
 .printer-card-back {
@@ -195,14 +199,20 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
+  z-index: 1;
+  visibility: hidden;
 }
 
 .printer-card-container.is-flipped .printer-card-front {
   transform: rotateY(180deg);
+  z-index: 1;
+  visibility: hidden;
 }
 
 .printer-card-container.is-flipped .printer-card-back {
   transform: rotateY(360deg);
+  z-index: 2;
+  visibility: visible;
 }
 
 .printer-card-front:hover:not(.printer-disabled) {
@@ -317,7 +327,6 @@ body {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  transform: scaleX(-1); /* Flip horizontally to correct mirrored image */
 }
 
 .camera-overlay {
