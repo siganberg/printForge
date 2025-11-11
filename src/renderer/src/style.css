@@ -1262,6 +1262,10 @@ body {
   }
 
   .modal-body {
+    padding: 0.5rem;
+  }
+
+  .modal-header {
     padding: 1rem;
   }
 
@@ -1307,5 +1311,15 @@ body {
 
   .plate-card, .filament-card {
     width: 100%;
+  }
+
+  /* Reduce padding on file list for mobile */
+  .file-list-container {
+    padding: 0.75rem;
+  }
+
+  .file-item {
+    padding: 0.75rem;
+    gap: 0.75rem;
   }
 }
